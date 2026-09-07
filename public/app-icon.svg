@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+	<rect width="512" height="512" rx="112" fill="#07552f"/>
+	<path d="M138 168h27l15 67c2 12 12 20 24 20h93c11 0 20-7 23-18l13-45H174" fill="#fffdf7" stroke="#fffdf7" stroke-linecap="round" stroke-linejoin="round" stroke-width="13"/>
+	<path d="M190 176c0-38 54-38 54 0" fill="none" stroke="#72c942" stroke-width="11" stroke-linecap="round"/>
+	<path d="M203 165l22 48 62-14-20-45z" fill="#48a92e"/>
+	<path d="M254 197l55-13 12 48-57 13z" fill="#ff6045"/>
+	<path d="M307 138l9-23M334 155l20-18M350 183l25-2" stroke="#ff6045" stroke-width="10" stroke-linecap="round"/>
+	<circle cx="193" cy="280" r="16" fill="#fffdf7"/><circle cx="303" cy="280" r="16" fill="#fffdf7"/>
+	<ellipse cx="247" cy="305" rx="82" ry="10" fill="#6ba675"/>
+	<text x="256" y="375" text-anchor="middle" fill="#fffdf7" font-family="Georgia,serif" font-size="58" font-weight="bold">Apna</text>
+	<text x="256" y="430" text-anchor="middle" fill="#ff6045" font-family="Georgia,serif" font-size="58" font-weight="bold">Cart</text>
+	<text x="256" y="470" text-anchor="middle" fill="#fffdf7" font-family="Arial,sans-serif" font-size="15" font-weight="bold" letter-spacing="4">SHOP  •  SAVE  •  SMILE</text>
+</svg>

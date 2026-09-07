@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="260" viewBox="0 0 860 260" role="img" aria-labelledby="title desc">
+  <title id="title">Apna Cart logo</title>
+  <desc id="desc">Apna Cart marketplace logo with a shopping bag mark</desc>
+  <rect width="860" height="260" rx="34" fill="#fffdf7"/>
+  <circle cx="126" cy="130" r="91" fill="#e8f0d9"/>
+  <path d="M78 106h96l-12 89H90z" fill="#183d30"/>
+  <path d="M98 108c0-37 56-37 56 0" fill="none" stroke="#df6c4d" stroke-width="13" stroke-linecap="round"/>
+  <path d="M101 133h50" stroke="#f8f4e9" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="108" cy="207" r="9" fill="#df6c4d"/><circle cx="153" cy="207" r="9" fill="#df6c4d"/>
+  <text x="250" y="151" fill="#183d30" font-family="Georgia, serif" font-size="88" font-weight="600" letter-spacing="-5">Apna</text>
+  <text x="470" y="151" fill="#df6c4d" font-family="Georgia, serif" font-size="88" font-weight="600" letter-spacing="-5">Cart</text>
+  <text x="700" y="88" fill="#183d30" font-family="Arial, sans-serif" font-size="20">®</text>
+  <text x="255" y="193" fill="#6f1d2b" font-family="Arial, sans-serif" font-size="16" font-weight="600" letter-spacing="3">HAR ZAROORAT, EK HI CART MEIN</text>
+</svg>
