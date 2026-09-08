@@ -1,0 +1,55 @@
+{
+  "name": "Apna Cart",
+  "short_name": "Apna Cart",
+  "id": "/",
+  "description": "Fashion, home, beauty, electronics aur grocery ek hi cart mein.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "background_color": "#f8f4e9",
+  "theme_color": "#183d30",
+  "lang": "hi-IN",
+  "dir": "ltr",
+  "categories": [
+    "shopping",
+    "lifestyle"
+  ],
+  "prefer_related_applications": false,
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/app-icon.svg?version=5",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Shop products",
+      "short_name": "Shop",
+      "url": "/#shop",
+      "icons": [
+        {
+          "src": "/app-icon.svg?version=5",
+          "sizes": "any"
+        }
+      ]
+    },
+    {
+      "name": "My orders",
+      "short_name": "Orders",
+      "url": "/#top?orders=true",
+      "icons": [
+        {
+          "src": "/app-icon.svg?version=5",
+          "sizes": "any"
+        }
+      ]
+    }
+  ]
+}
