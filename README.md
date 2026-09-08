@@ -6,6 +6,21 @@ Apna Cart is a PWA. Run `npm run dev`, open the local URL in Chrome or Edge, the
 
 The service worker is registered in `src/main.tsx` and the install metadata is in `public/manifest.webmanifest`.
 
+## Backend setup
+
+The store includes an Express API for OTP login and persistent orders. Copy `.env.example` to `.env`, add Firebase Admin credentials, then create a Firestore database in the Firebase console. Orders are saved in the `orders` collection. SMTP sends customer OTPs to email and sends every new order to `OWNER_EMAIL`.
+
+For mobile-number OTP, also add the Twilio values in `.env`. Without SMTP or Twilio, development mode prints the OTP in the API terminal; production mode refuses to send an unconfigured OTP.
+
+Run both apps with:
+
+```bash
+npm install
+npm run dev:all
+```
+
+If Firebase credentials are missing, development falls back to `server/data/orders.json`; production should always use Firebase.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:

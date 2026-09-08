@@ -77,3 +77,4 @@
 @media (max-width: 760px) { .payment-panel { right: 18px; left: 18px; bottom: 85px; width: auto; padding: 16px; }.payment-panel h2 { font-size: 22px; }.payment-method { padding: 8px; }.detail-bottom-actions { bottom: 10px; } }
 @media (max-width: 760px) { .delivery-timeline { left: 18px; bottom: 72px; width: calc(100% - 36px); padding: 15px; }.delivery-summary strong { font-size: 17px; }.timeline-step small { font-size: 7px; } }
 @media (max-width: 760px) { .notification-fab { top: 128px; right: 18px; }.notification-panel { top: 176px; right: 18px; width: calc(100% - 36px); } }
+.demo-otp { margin: 10px 0; padding: 9px 11px; background: #e8f0d9; color: #183d30; font: 11px 'DM Mono'; }.demo-otp strong { color: #df6c4d; letter-spacing: .12em; }

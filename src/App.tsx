@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { RecaptchaVerifier, onAuthStateChanged, signInWithPhoneNumber, signOut, type ConfirmationResult, type User } from 'firebase/auth'
+import { addDoc, collection, doc, getDocs, query as firestoreQuery, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
+import { auth, authPersistence, db, firebaseConfigured, requireFirebase } from './firebase'
 import './App.css'
 
 type Product = { id: number; name: string; category: string; price: number; color: string; colors: string[]; sizes: string[]; image: string; images: string[]; description: string; rating: number; reviewCount: number; badge?: string }
 type CartLine = { productId: number; quantity: number }
-type OrderItem = Product & { status: string; location: string; phone: string; email?: string; quantity: number }
+type OrderItem = Product & { status: string; location: string; phone: string; email?: string; quantity: number; orderId?: string }
 
 type SortOption = 'featured' | 'low' | 'high'
 type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> }
 type UserProfile = { name: string; contact: string }
 type PaymentMethod = 'UPI' | 'Card' | 'Net banking' | 'Wallet' | 'Cash on Delivery'
 type AppNotification = { id: number; title: string; message: string; time: string; read: boolean }
+type FirebaseProfile = { uid: string; name: string; phoneNumber: string; email: string; address: string }
+type FirestoreOrder = { id: string; userId: string; customer: { name: string; phone: string; email: string }; items: Array<Product & { quantity: number }>; total: number; paymentMethod: PaymentMethod; address: string; status: string; location: string }
 
 const categories = ['All products', 'Fashion', 'Home', 'Beauty', 'Electronics', 'Grocery']
 const productImage = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=85`
@@ -68,12 +73,15 @@ function App() {
   const [smsNotice, setSmsNotice] = useState('')
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const [user, setUser] = useState<UserProfile | null>(null)
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
   const [loginStep, setLoginStep] = useState<'contact' | 'otp'>('contact')
   const [loginName, setLoginName] = useState('')
   const [loginContact, setLoginContact] = useState('')
   const [loginOtp, setLoginOtp] = useState('')
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)
+  const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash on Delivery')
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notificationText, setNotificationText] = useState('')
@@ -86,6 +94,33 @@ function App() {
     }
     window.addEventListener('beforeinstallprompt', handleInstallPrompt)
     return () => window.removeEventListener('beforeinstallprompt', handleInstallPrompt)
+  }, [])
+
+  useEffect(() => {
+    if (!auth || !db || !firebaseConfigured) return
+    const firebaseDb = db
+    let unsubscribe: (() => void) = () => undefined
+    authPersistence.then(() => {
+      if (!auth) return
+      unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        setFirebaseUser(currentUser)
+        if (!currentUser) {
+          setUser(null)
+          setOrderHistory([])
+          return
+        }
+        const profile = await getDocs(firestoreQuery(collection(firebaseDb, 'users'), where('__name__', '==', currentUser.uid)))
+        const profileData = profile.docs[0]?.data() as Partial<FirebaseProfile> | undefined
+        setUser({ name: profileData?.name || currentUser.displayName || 'Apna Cart shopper', contact: currentUser.phoneNumber || '' })
+        const orders = await getDocs(firestoreQuery(collection(firebaseDb, 'orders'), where('userId', '==', currentUser.uid)))
+        const history = orders.docs.map((orderDocument) => {
+          const order = orderDocument.data() as Omit<FirestoreOrder, 'id'>
+          return order.items.map((item) => ({ ...item, status: order.status, location: order.location, phone: order.customer.phone, email: order.customer.email, orderId: orderDocument.id }))
+        }).flat()
+        setOrderHistory(history)
+      })
+    })
+    return () => unsubscribe()
   }, [])
 
   const filteredProducts = useMemo(() => {
@@ -113,24 +148,70 @@ function App() {
   const sendNotification = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!notificationText.trim()) return; setNotifications((items) => [{ id: Date.now(), title: 'Apna Cart update', message: notificationText.trim(), time: 'Just now', read: false }, ...items]); setNotificationText(''); setSmsNotice('Notification sent in this app.'); if ('Notification' in window && Notification.permission === 'granted') new Notification('Apna Cart update', { body: notificationText.trim() }) }
   const enableNotifications = async () => { if ('Notification' in window) { const permission = await Notification.requestPermission(); setSmsNotice(permission === 'granted' ? 'Notifications enabled.' : 'Notification permission was not enabled.') } }
   const unreadNotifications = notifications.filter((notification) => !notification.read).length
-  const openLogin = () => { setLoginStep('contact'); setLoginOpen(true) }
-  const requestOtp = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); setLoginStep('otp'); setSmsNotice(`Demo OTP 1234 sent to ${loginContact}.`) }
-  const verifyOtp = (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); if (loginOtp !== '1234') { setSmsNotice('Please enter OTP 1234 for this demo.'); return }; setUser({ name: loginName || 'Apna Cart shopper', contact: loginContact }); setLoginOpen(false); setSmsNotice('Login successful. You can now place your order.') }
+  const openLogin = () => { setLoginStep('contact'); setLoginOtp(''); setLoginOpen(true) }
+  const requestOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    try {
+      const { auth: firebaseAuth } = requireFirebase()
+      if (!recaptchaVerifier.current) recaptchaVerifier.current = new RecaptchaVerifier(firebaseAuth, 'recaptcha-container', { size: 'invisible' })
+      const confirmation = await signInWithPhoneNumber(firebaseAuth, loginContact.trim(), recaptchaVerifier.current)
+      setConfirmationResult(confirmation)
+      setLoginStep('otp')
+      setSmsNotice(`OTP sent to ${loginContact}.`)
+    } catch (error) {
+      recaptchaVerifier.current?.clear()
+      recaptchaVerifier.current = null
+      setSmsNotice(error instanceof Error ? error.message : 'OTP could not be sent.')
+    }
+  }
+  const resendOtp = async () => {
+    const { auth: firebaseAuth } = requireFirebase()
+    recaptchaVerifier.current?.clear()
+    recaptchaVerifier.current = new RecaptchaVerifier(firebaseAuth, 'recaptcha-container', { size: 'invisible' })
+    const confirmation = await signInWithPhoneNumber(firebaseAuth, loginContact.trim(), recaptchaVerifier.current)
+    setConfirmationResult(confirmation)
+    setSmsNotice(`OTP resent to ${loginContact}.`)
+  }
+  const verifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    try {
+      if (!confirmationResult) throw new Error('Please request an OTP first.')
+      const result = await confirmationResult.confirm(loginOtp.trim())
+      const { db: firestoreDb } = requireFirebase()
+      await setDoc(doc(firestoreDb, 'users', result.user.uid), { uid: result.user.uid, phoneNumber: result.user.phoneNumber || loginContact.trim(), name: loginName.trim() || 'Apna Cart shopper', email: result.user.email || '', address: customerAddress, updatedAt: serverTimestamp() }, { merge: true })
+      setUser({ name: loginName.trim() || 'Apna Cart shopper', contact: result.user.phoneNumber || loginContact.trim() })
+      setLoginOpen(false)
+      setConfirmationResult(null)
+      setSmsNotice('Login successful. You can now place your order.')
+      if (cart.length > 0) setCheckoutOpen(true)
+    } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'OTP verification failed.') }
+  }
   const variantImage = (product: Product, color: string, size: string) => product.images[(Math.max(0, product.colors.indexOf(color)) + Math.max(0, product.sizes.indexOf(size))) % product.images.length]
   const openProduct = (product: Product) => { setSelectedProduct(product); setSelectedSize(product.sizes[0]); setSelectedColor(product.colors[0]); setSelectedImage(variantImage(product, product.colors[0], product.sizes[0])) }
   const buyNow = (id: number) => { addToCart(id); setSelectedProduct(null); if (user) setCheckoutOpen(true); else openLogin() }
   const selectedPrice = selectedProduct ? selectedProduct.price + Math.max(0, selectedProduct.sizes.indexOf(selectedSize)) * 18 : 0
   const relatedProducts = selectedProduct ? products.filter((product) => product.category === selectedProduct.category && product.id !== selectedProduct.id).slice(0, 4) : []
-  const placeOrder = (event: React.FormEvent<HTMLFormElement>) => {
+  const placeOrder = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!user) { openLogin(); return }
-    setSmsNotice(`${paymentMethod} selected. Order is being confirmed.`)
-    setOrderHistory((orders) => [...cartItems.map(({ product, quantity }) => ({ ...product, quantity, status: 'Processing', location: 'Order received', phone: customerPhone, email: customerEmail })), ...orders])
-    setCart([])
-    setCheckoutOpen(false)
-    setOrdersOpen(true)
-    setSmsNotice(`Thanks ${customerName || 'there'}! Your order is confirmed. We will contact you on ${customerPhone}.`)
+    if (!user || !firebaseUser) { openLogin(); return }
+    try {
+      const { db: firestoreDb } = requireFirebase()
+      const orderReference = await addDoc(collection(firestoreDb, 'orders'), { userId: firebaseUser.uid, customer: { name: customerName || user.name, phone: customerPhone, email: customerEmail }, items: cartItems.map(({ product, quantity }) => ({ ...product, quantity })), total: cartTotal, paymentMethod, address: customerAddress, status: 'Processing', location: 'Order received', createdAt: serverTimestamp() })
+      setOrderHistory((orders) => [...cartItems.map(({ product, quantity }) => ({ ...product, quantity, status: 'Processing', location: 'Order received', phone: customerPhone, email: customerEmail, orderId: orderReference.id })), ...orders])
+      setCart([])
+      setCheckoutOpen(false)
+      setOrdersOpen(true)
+      setSmsNotice(`Thanks ${customerName || 'there'}! Your order is confirmed.`)
+    } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'Order could not be placed.') }
   }
+  const updateOrderStatus = async (order: OrderItem, index: number, status: string, location: string) => {
+    try {
+      const { db: firestoreDb } = requireFirebase()
+      if (order.orderId) await updateDoc(doc(firestoreDb, 'orders', order.orderId), { status, location })
+      setOrderHistory((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status, location } : item))
+    } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'Order status could not be updated.') }
+  }
+  void updateOrderStatus
 
   return (
     <div className="store-shell">
@@ -148,7 +229,7 @@ function App() {
           {installPrompt && <button className="install-button" onClick={async () => { await installPrompt.prompt(); setInstallPrompt(null) }}>Install app</button>}
           <button className="bag-button" onClick={() => { setOrdersOpen(false); setWishlistOpen(false); setCartOpen(true) }} aria-label="Open shopping bag">Bag <b>{cartCount}</b></button>
         </div>
-        {profileOpen && user && <aside className="profile-menu"><div className="profile-menu-head"><span>♙</span><div><strong>{user.name}</strong><small>{user.contact}</small></div><button onClick={() => setProfileOpen(false)} aria-label="Close profile menu">×</button></div><div className="profile-menu-links"><button onClick={() => { openOrders(); setProfileOpen(false) }}><span>⌁</span>My orders <b>{orderHistory.length}</b></button><button onClick={() => { setWishlistOpen(true); setOrdersOpen(false); setCartOpen(true); setProfileOpen(false) }}><span>♡</span>Saved items <b>{wishlist.length}</b></button><button onClick={() => { setNotificationOpen(true); setProfileOpen(false) }}><span>♧</span>Notifications <b>{unreadNotifications}</b></button></div><button className="logout-button" onClick={() => { setUser(null); setProfileOpen(false); setSmsNotice('You have been logged out.') }}>Log out <span>↗</span></button></aside>}
+        {profileOpen && user && <aside className="profile-menu"><div className="profile-menu-head"><span>♙</span><div><strong>{user.name}</strong><small>{user.contact}</small></div><button onClick={() => setProfileOpen(false)} aria-label="Close profile menu">×</button></div><div className="profile-menu-links"><button onClick={() => { openOrders(); setProfileOpen(false) }}><span>⌁</span>My orders <b>{orderHistory.length}</b></button><button onClick={() => { setWishlistOpen(true); setOrdersOpen(false); setCartOpen(true); setProfileOpen(false) }}><span>♡</span>Saved items <b>{wishlist.length}</b></button><button onClick={() => { setNotificationOpen(true); setProfileOpen(false) }}><span>♧</span>Notifications <b>{unreadNotifications}</b></button></div><button className="logout-button" onClick={async () => { if (auth) await signOut(auth); setUser(null); setProfileOpen(false); setSmsNotice('You have been logged out.') }}>Log out <span>↗</span></button></aside>}
       </header>
 
       <main id="top">
@@ -183,7 +264,7 @@ function App() {
 
       <footer><div><a className="logo-wordmark" href="#top" aria-label="Apna Cart home"><img src="/apna-cart-logo.svg" alt="Apna Cart" /></a><p>Har zaroorat, ek hi cart mein.</p></div><div className="contact-block"><strong>Contact us</strong><a href="tel:+917408590674">Mobile / WhatsApp: 7408590674</a><a href="mailto:aroonmaurya2@gmail.com">aroonmaurya2@gmail.com</a><span>Shop address: Goan Devi Mandir, Dhaniv Baug Talav, Nallasopara, Maharashtra - 401209</span><span>Business hours: 10:00 AM to 6:00 PM</span></div><small>© 2026 Apna Cart</small></footer>
 
-      {loginOpen && <div className="detail-overlay" onClick={() => setLoginOpen(false)}><section className="login-card" onClick={(event) => event.stopPropagation()}><button className="detail-close" onClick={() => setLoginOpen(false)} aria-label="Close login">×</button><p className="eyebrow">WELCOME TO APNA CART</p><h2>{loginStep === 'contact' ? 'Login to continue' : 'Verify your account'}</h2>{loginStep === 'contact' ? <form onSubmit={requestOtp}><input required value={loginName} onChange={(event) => setLoginName(event.target.value)} placeholder="Your name" /><input required value={loginContact} onChange={(event) => setLoginContact(event.target.value)} placeholder="Mobile number or email" /><button className="checkout" type="submit">Send OTP <span>↗</span></button></form> : <form onSubmit={verifyOtp}><p className="login-hint">Enter the OTP sent to {loginContact}.</p><input required inputMode="numeric" value={loginOtp} onChange={(event) => setLoginOtp(event.target.value)} placeholder="Enter OTP" maxLength={4} /><button className="checkout" type="submit">Verify and login <span>↗</span></button><button className="login-back" type="button" onClick={() => setLoginStep('contact')}>Change number/email</button></form>}<small className="login-note">Login is required before placing an order.</small></section></div>}
+      {loginOpen && <div className="detail-overlay" onClick={() => setLoginOpen(false)}><section className="login-card" onClick={(event) => event.stopPropagation()}><button className="detail-close" onClick={() => setLoginOpen(false)} aria-label="Close login">×</button><p className="eyebrow">WELCOME TO APNA CART</p><h2>{loginStep === 'contact' ? 'Login to continue' : 'Verify your account'}</h2><div id="recaptcha-container" />{loginStep === 'contact' ? <form onSubmit={requestOtp}><input required value={loginName} onChange={(event) => setLoginName(event.target.value)} placeholder="Your name" /><input required value={loginContact} onChange={(event) => setLoginContact(event.target.value)} placeholder="Phone number (+91...)" /><button className="checkout" type="submit">Send OTP <span>↗</span></button></form> : <form onSubmit={verifyOtp}><p className="login-hint">Enter the OTP sent to {loginContact}.</p><input required inputMode="numeric" value={loginOtp} onChange={(event) => setLoginOtp(event.target.value)} placeholder="Enter OTP" maxLength={6} /><button className="checkout" type="submit">Verify and login <span>↗</span></button><button className="login-back" type="button" onClick={resendOtp}>Resend OTP</button><button className="login-back" type="button" onClick={() => setLoginStep('contact')}>Change number</button></form>}<small className="login-note">Login is required before placing an order.</small></section></div>}
 
       {selectedProduct && <div className="detail-overlay" onClick={() => setSelectedProduct(null)}><section className="product-detail" onClick={(event) => event.stopPropagation()}><button className="detail-close" onClick={() => setSelectedProduct(null)} aria-label="Close product details">×</button><div className="detail-gallery"><img src={selectedImage || selectedProduct.image} alt={`${selectedProduct.name} in ${selectedColor}, size ${selectedSize}`} /><div className="catalog-thumbs">{selectedProduct.images.map((image, index) => <button key={image} className={selectedImage === image ? 'active' : ''} onClick={() => setSelectedImage(image)}><img src={image} alt={`${selectedProduct.name} view ${index + 1}`} /></button>)}</div></div><div className="detail-copy"><p className="eyebrow">{selectedProduct.category}</p><h2>{selectedProduct.name}</h2><div className="detail-rating"><span>★ {selectedProduct.rating}</span> <small>{selectedProduct.reviewCount} ratings</small></div><p className="detail-color">{selectedProduct.color}</p><div className="variant-group"><strong>Color</strong><div className="variant-options">{selectedProduct.colors.map((color) => <button className={selectedColor === color ? 'selected' : ''} key={color} onClick={() => { setSelectedColor(color); setSelectedImage(variantImage(selectedProduct, color, selectedSize)) }}>{color}</button>)}</div></div><div className="variant-group"><strong>Size</strong><div className="variant-options">{selectedProduct.sizes.map((size) => <button className={selectedSize === size ? 'selected' : ''} key={size} onClick={() => { setSelectedSize(size); setSelectedImage(variantImage(selectedProduct, selectedColor, size)) }}>{size}</button>)}</div></div><div className="selected-variant">Selected: {selectedColor} / {selectedSize}</div><strong>{inr(selectedPrice)}</strong><p>{selectedProduct.description}</p><div className="detail-actions"><button className="primary-button" onClick={() => { addToCart(selectedProduct.id); setSelectedProduct(null) }}>Add to bag <span>↗</span></button><button className="outline-button" onClick={() => toggleWishlist(selectedProduct.id)}>{wishlist.includes(selectedProduct.id) ? '♥ Saved' : '♡ Save for later'}</button></div><div className="related-products"><h3>Related products</h3><div>{relatedProducts.map((product) => <button key={product.id} onClick={() => openProduct(product)}><img src={product.image} alt={product.name} /><strong>{product.name}</strong><span>★ {product.rating} · {inr(product.price)}</span></button>)}</div></div></div></section></div>}
 
