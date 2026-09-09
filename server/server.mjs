@@ -128,9 +128,13 @@ app.post('/api/orders', async (request, response) => {
   const session = sessions.get(request.headers.authorization?.replace('Bearer ', ''))
   if (!session) return response.status(401).json({ message: 'Please login again.' })
   const { items, total, address, paymentMethod, phone, email } = request.body || {}
-  if (!Array.isArray(items) || items.length === 0 || !address?.trim() || !phone?.trim()) return response.status(400).json({ message: 'Order items, phone and address are required.' })
-  const order = { id: Date.now(), createdAt: new Date().toISOString(), customer: { name: session.name, contact: session.contact, phone: phone.trim(), email: email?.trim() || '' }, address: address.trim(), paymentMethod, total, items, status: 'Processing', location: 'Order received' }
+  if (!Array.isArray(items) || items.length === 0 || !address?.trim() || !phone?.trim()) return response.status(400).json({ message: 'Order items, phone and address are required.' }
+    const productTotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0)
+const { commission, sellerAmount } = calculateCommission(productTotal)
+const order = { id: Date.now(), createdAt: new Date().toISOString(), customer: { name: session.name, contact: session.contact, phone: phone.trim(), email: email?.trim() || '' }, address: address.trim(), paymentMethod, total: Number(total) || productTotal, productTotal, commission, sellerAmount, platformEarning: commission, earningStatus: 'Pending', items, status: 'Processing', location: 'Order received' }                                                                                                                      
   if (ordersCollection) await ordersCollection.doc(String(order.id)).set(order)
+
+    
   else {
     const orders = await readOrders()
     orders.unshift(order)
