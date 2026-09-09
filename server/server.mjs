@@ -158,5 +158,41 @@ app.patch('/api/orders/:id/status', async (request, response) => {
   await writeOrders(orders)
   return response.json({ order })
 })
+// Seller create API
+app.post('/api/sellers', async (request, response) => {
+  if (!sellersCollection) {
+    return response.status(503).json({
+      message: 'Firebase is not configured.',
+    })
+  }
 
+  const { sellerId, name, email, commissionRate } = request.body || {}
+
+  if (!sellerId || !name || !email) {
+    return response.status(400).json({
+      message: 'sellerId, name and email are required.',
+    })
+  }
+
+  const rate = Number(commissionRate ?? DEFAULT_COMMISSION_RATE)
+
+  if (rate < 0 || rate > 100) {
+    return response.status(400).json({
+      message: 'Commission rate must be between 0 and 100.',
+    })
+  }
+
+  const seller = {
+    sellerId,
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    commissionRate: rate,
+    status: 'active',
+    createdAt: new Date().toISOString(),
+  }
+
+  await sellersCollection.doc(sellerId).set(seller)
+
+  return response.status(201).json({ seller })
+})
 app.listen(port, () => console.log(`Apna Cart API running at http://localhost:${port}`))
