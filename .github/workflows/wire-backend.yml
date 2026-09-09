@@ -1,0 +1,36 @@
+name: Wire backend API into frontend
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "src/App.tsx"
+      - "scripts/wire-backend.mjs"
+      - ".github/workflows/wire-backend.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply backend integration
+        run: node scripts/wire-backend.mjs
+      - name: Commit generated integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git add src/App.tsx
+          git commit -m "Connect frontend login and orders to backend API"
+          git push
