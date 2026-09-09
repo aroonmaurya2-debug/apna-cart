@@ -44,6 +44,11 @@ const categoryTiles = [
 const inr = (amount: number) => `₹${amount.toLocaleString('en-IN')}`
 const trackingSteps = ['Order placed', 'Packed', 'Shipped', 'Out for delivery', 'Delivered']
 const trackingIndex = (status: string) => status === 'Processing' ? 0 : status === 'Accepted' ? 2 : status === 'Shipped' ? 3 : 4
+const API_BASE = import.meta.env.DEV ? 'http://localhost:10000/api' : '/.netlify/functions/api'
+const getApiToken = () => localStorage.getItem('apna_cart_api_token') || ''
+const getSavedApiUser = (): UserProfile | null => {
+  try { return JSON.parse(localStorage.getItem('apna_cart_api_user') || 'null') as UserProfile | null } catch { return null }
+}
 
 function DeliveryTimeline({ order }: { order: OrderItem }) {
   const currentStep = trackingIndex(order.status)
@@ -81,6 +86,7 @@ function App() {
   const [loginContact, setLoginContact] = useState('')
   const [loginOtp, setLoginOtp] = useState('')
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)
+  const [authMode, setAuthMode] = useState<'backend' | 'firebase'>('backend')
   const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash on Delivery')
   const [notificationOpen, setNotificationOpen] = useState(false)
@@ -97,7 +103,20 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!auth || !db || !firebaseConfigured) return
+  const token = getApiToken()
+  const savedUser = getSavedApiUser()
+  if (!token || !savedUser) return
+  setAuthMode('backend')
+  setUser(savedUser)
+  fetch(`${API_BASE}/orders`, { headers: { Authorization: `Bearer ${token}` } })
+    .then(async (response) => { if (!response.ok) throw new Error('Backend session expired.'); return response.json() })
+    .then((orders) => setOrderHistory(orders.flatMap((order: any) => order.items.map((item: Product & { quantity: number }) => ({ ...item, status: order.status, location: order.location, phone: order.customer?.phone || order.customer?.contact || '', email: order.customer?.email || '', orderId: String(order.id) })))))
+    .catch(() => { localStorage.removeItem('apna_cart_api_token'); localStorage.removeItem('apna_cart_api_user'); setUser(null) })
+}, [])
+
+useEffect(() => {
+  if (getApiToken()) return
+  if (!auth || !db || !firebaseConfigured) return
     const firebaseDb = db
     let unsubscribe: (() => void) = () => undefined
     authPersistence.then(() => {
@@ -150,20 +169,25 @@ function App() {
   const unreadNotifications = notifications.filter((notification) => !notification.read).length
   const openLogin = () => { setLoginStep('contact'); setLoginOtp(''); setLoginOpen(true) }
   const requestOtp = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    try {
-      const { auth: firebaseAuth } = requireFirebase()
-      if (!recaptchaVerifier.current) recaptchaVerifier.current = new RecaptchaVerifier(firebaseAuth, 'recaptcha-container', { size: 'invisible' })
-      const confirmation = await signInWithPhoneNumber(firebaseAuth, loginContact.trim(), recaptchaVerifier.current)
-      setConfirmationResult(confirmation)
-      setLoginStep('otp')
-      setSmsNotice(`OTP sent to ${loginContact}.`)
-    } catch (error) {
-      recaptchaVerifier.current?.clear()
-      recaptchaVerifier.current = null
-      setSmsNotice(error instanceof Error ? error.message : 'OTP could not be sent.')
-    }
+  event.preventDefault()
+  try {
+    const backendResponse = await fetch(`${API_BASE}/auth/request-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: loginName.trim(), contact: loginContact.trim() }) })
+    if (backendResponse.ok) { setAuthMode('backend'); setLoginStep('otp'); setSmsNotice(`OTP sent to ${loginContact}.`); return }
+    const backendMessage = await backendResponse.json().catch(() => ({}))
+    if (!firebaseConfigured) throw new Error(backendMessage.message || 'OTP provider is not configured.')
+    setAuthMode('firebase')
+    const { auth: firebaseAuth } = requireFirebase()
+    if (!recaptchaVerifier.current) recaptchaVerifier.current = new RecaptchaVerifier(firebaseAuth, 'recaptcha-container', { size: 'invisible' })
+    const confirmation = await signInWithPhoneNumber(firebaseAuth, loginContact.trim(), recaptchaVerifier.current)
+    setConfirmationResult(confirmation)
+    setLoginStep('otp')
+    setSmsNotice(`OTP sent to ${loginContact}.`)
+  } catch (error) {
+    recaptchaVerifier.current?.clear()
+    recaptchaVerifier.current = null
+    setSmsNotice(error instanceof Error ? error.message : 'OTP could not be sent.')
   }
+}
   const resendOtp = async () => {
     const { auth: firebaseAuth } = requireFirebase()
     recaptchaVerifier.current?.clear()
@@ -173,44 +197,76 @@ function App() {
     setSmsNotice(`OTP resent to ${loginContact}.`)
   }
   const verifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    try {
-      if (!confirmationResult) throw new Error('Please request an OTP first.')
-      const result = await confirmationResult.confirm(loginOtp.trim())
-      const { db: firestoreDb } = requireFirebase()
-      await setDoc(doc(firestoreDb, 'users', result.user.uid), { uid: result.user.uid, phoneNumber: result.user.phoneNumber || loginContact.trim(), name: loginName.trim() || 'Apna Cart shopper', email: result.user.email || '', address: customerAddress, updatedAt: serverTimestamp() }, { merge: true })
-      setUser({ name: loginName.trim() || 'Apna Cart shopper', contact: result.user.phoneNumber || loginContact.trim() })
+  event.preventDefault()
+  try {
+    if (authMode === 'backend') {
+      const response = await fetch(`${API_BASE}/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact: loginContact.trim(), otp: loginOtp.trim() }) })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.message || 'OTP verification failed.')
+      const apiUser = data.user as UserProfile
+      localStorage.setItem('apna_cart_api_token', data.token)
+      localStorage.setItem('apna_cart_api_user', JSON.stringify(apiUser))
+      setUser(apiUser)
       setLoginOpen(false)
-      setConfirmationResult(null)
       setSmsNotice('Login successful. You can now place your order.')
+      const ordersResponse = await fetch(`${API_BASE}/orders`, { headers: { Authorization: 'Bearer ' + data.token } })
+      if (ordersResponse.ok) {
+        const orders = await ordersResponse.json()
+        setOrderHistory(orders.flatMap((order: any) => order.items.map((item: Product & { quantity: number }) => ({ ...item, status: order.status, location: order.location, phone: order.customer?.phone || order.customer?.contact || '', email: order.customer?.email || '', orderId: String(order.id) }))))
+      }
       if (cart.length > 0) setCheckoutOpen(true)
-    } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'OTP verification failed.') }
-  }
+      return
+    }
+    if (!confirmationResult) throw new Error('Please request an OTP first.')
+    const result = await confirmationResult.confirm(loginOtp.trim())
+    const { db: firestoreDb } = requireFirebase()
+    await setDoc(doc(firestoreDb, 'users', result.user.uid), { uid: result.user.uid, phoneNumber: result.user.phoneNumber || loginContact.trim(), name: loginName.trim() || 'Apna Cart shopper', email: result.user.email || '', address: customerAddress, updatedAt: serverTimestamp() }, { merge: true })
+    setUser({ name: loginName.trim() || 'Apna Cart shopper', contact: result.user.phoneNumber || loginContact.trim() })
+    setLoginOpen(false)
+    setConfirmationResult(null)
+    setSmsNotice('Login successful. You can now place your order.')
+    if (cart.length > 0) setCheckoutOpen(true)
+  } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'OTP verification failed.') }
+}
   const variantImage = (product: Product, color: string, size: string) => product.images[(Math.max(0, product.colors.indexOf(color)) + Math.max(0, product.sizes.indexOf(size))) % product.images.length]
   const openProduct = (product: Product) => { setSelectedProduct(product); setSelectedSize(product.sizes[0]); setSelectedColor(product.colors[0]); setSelectedImage(variantImage(product, product.colors[0], product.sizes[0])) }
   const buyNow = (id: number) => { addToCart(id); setSelectedProduct(null); if (user) setCheckoutOpen(true); else openLogin() }
   const selectedPrice = selectedProduct ? selectedProduct.price + Math.max(0, selectedProduct.sizes.indexOf(selectedSize)) * 18 : 0
   const relatedProducts = selectedProduct ? products.filter((product) => product.category === selectedProduct.category && product.id !== selectedProduct.id).slice(0, 4) : []
   const placeOrder = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!user || !firebaseUser) { openLogin(); return }
+  event.preventDefault()
+  if (!user) { openLogin(); return }
+  const apiToken = getApiToken()
+  if (apiToken) {
     try {
-      const { db: firestoreDb } = requireFirebase()
-      const orderReference = await addDoc(collection(firestoreDb, 'orders'), { userId: firebaseUser.uid, customer: { name: customerName || user.name, phone: customerPhone, email: customerEmail }, items: cartItems.map(({ product, quantity }) => ({ ...product, quantity })), total: cartTotal, paymentMethod, address: customerAddress, status: 'Processing', location: 'Order received', createdAt: serverTimestamp() })
-      setOrderHistory((orders) => [...cartItems.map(({ product, quantity }) => ({ ...product, quantity, status: 'Processing', location: 'Order received', phone: customerPhone, email: customerEmail, orderId: orderReference.id })), ...orders])
+      const response = await fetch(`${API_BASE}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiToken }, body: JSON.stringify({ items: cartItems.map(({ product, quantity }) => ({ ...product, quantity })), total: cartTotal, paymentMethod, address: customerAddress, phone: customerPhone, email: customerEmail }) })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.message || 'Order could not be placed.')
+      const order = data.order
+      setOrderHistory((orders) => [...order.items.map((item: Product & { quantity: number }) => ({ ...item, status: order.status, location: order.location, phone: order.customer.phone, email: order.customer.email, orderId: String(order.id) })), ...orders])
       setCart([])
       setCheckoutOpen(false)
       setOrdersOpen(true)
-      setSmsNotice(`Thanks ${customerName || 'there'}! Your order is confirmed.`)
-    } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'Order could not be placed.') }
+      setSmsNotice(`Thanks ${customerName || user.name}! Your order is confirmed.`)
+      return
+    } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'Order could not be placed.'); return }
   }
+  try {
+    const { db: firestoreDb } = requireFirebase()
   const updateOrderStatus = async (order: OrderItem, index: number, status: string, location: string) => {
-    try {
+  try {
+    const apiToken = getApiToken()
+    if (apiToken && order.orderId) {
+      const response = await fetch(`${API_BASE}/orders/${order.orderId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiToken }, body: JSON.stringify({ status, location }) })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.message || 'Order status could not be updated.')
+    } else if (order.orderId) {
       const { db: firestoreDb } = requireFirebase()
-      if (order.orderId) await updateDoc(doc(firestoreDb, 'orders', order.orderId), { status, location })
-      setOrderHistory((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status, location } : item))
-    } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'Order status could not be updated.') }
-  }
+      await updateDoc(doc(firestoreDb, 'orders', order.orderId), { status, location })
+    }
+    setOrderHistory((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status, location } : item))
+  } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'Order status could not be updated.') }
+}
   void updateOrderStatus
 
   return (
@@ -229,7 +285,7 @@ function App() {
           {installPrompt && <button className="install-button" onClick={async () => { await installPrompt.prompt(); setInstallPrompt(null) }}>Install app</button>}
           <button className="bag-button" onClick={() => { setOrdersOpen(false); setWishlistOpen(false); setCartOpen(true) }} aria-label="Open shopping bag">Bag <b>{cartCount}</b></button>
         </div>
-        {profileOpen && user && <aside className="profile-menu"><div className="profile-menu-head"><span>♙</span><div><strong>{user.name}</strong><small>{user.contact}</small></div><button onClick={() => setProfileOpen(false)} aria-label="Close profile menu">×</button></div><div className="profile-menu-links"><button onClick={() => { openOrders(); setProfileOpen(false) }}><span>⌁</span>My orders <b>{orderHistory.length}</b></button><button onClick={() => { setWishlistOpen(true); setOrdersOpen(false); setCartOpen(true); setProfileOpen(false) }}><span>♡</span>Saved items <b>{wishlist.length}</b></button><button onClick={() => { setNotificationOpen(true); setProfileOpen(false) }}><span>♧</span>Notifications <b>{unreadNotifications}</b></button></div><button className="logout-button" onClick={async () => { if (auth) await signOut(auth); setUser(null); setProfileOpen(false); setSmsNotice('You have been logged out.') }}>Log out <span>↗</span></button></aside>}
+        {profileOpen && user && <aside className="profile-menu"><div className="profile-menu-head"><span>♙</span><div><strong>{user.name}</strong><small>{user.contact}</small></div><button onClick={() => setProfileOpen(false)} aria-label="Close profile menu">×</button></div><div className="profile-menu-links"><button onClick={() => { openOrders(); setProfileOpen(false) }}><span>⌁</span>My orders <b>{orderHistory.length}</b></button><button onClick={() => { setWishlistOpen(true); setOrdersOpen(false); setCartOpen(true); setProfileOpen(false) }}><span>♡</span>Saved items <b>{wishlist.length}</b></button><button onClick={() => { setNotificationOpen(true); setProfileOpen(false) }}><span>♧</span>Notifications <b>{unreadNotifications}</b></button></div><button className="logout-button" onClick={async () => { if (auth) await signOut(auth); localStorage.removeItem('apna_cart_api_token'); localStorage.removeItem('apna_cart_api_user'); setUser(null); setOrderHistory([]); setProfileOpen(false); setSmsNotice('You have been logged out.') }}>Log out <span>↗</span></button></aside>}
       </header>
 
       <main id="top">
