@@ -21,15 +21,18 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path('src/App.tsx')
           s = p.read_text()
-          def rep(old, new, label):
-              global s
-              if old not in s:
-                  raise SystemExit(f'Missing target: {label}')
-              s = s.replace(old, new, 1)
 
-          rep("const trackingIndex = (status: string) => status === 'Processing' ? 0 : status === 'Accepted' ? 2 : status === 'Shipped' ? 3 : 4\n", """const trackingIndex = (status: string) => status === 'Processing' ? 0 : status === 'Accepted' ? 2 : status === 'Shipped' ? 3 : 4
+          def once(pattern, replacement, label):
+              global s
+              s2, count = re.subn(pattern, replacement, s, count=1, flags=re.S | re.M)
+              if count != 1:
+                  raise SystemExit(f'Missing target: {label}')
+              s = s2
+
+          once(r"const trackingIndex = .*?\n(?=\nfunction DeliveryTimeline)", """const trackingIndex = (status: string) => status === 'Processing' ? 0 : status === 'Accepted' ? 2 : status === 'Shipped' ? 3 : 4
           const API_BASE = import.meta.env.DEV ? 'http://localhost:10000/api' : '/.netlify/functions/api'
           const getApiToken = () => localStorage.getItem('apna_cart_api_token') || ''
           const getSavedApiUser = (): UserProfile | null => {
@@ -37,11 +40,10 @@ jobs:
           }
           """, 'API helpers')
 
-          rep("  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)\n", """  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)
-            const [authMode, setAuthMode] = useState<'backend' | 'firebase'>('backend')
-          """, 'auth mode')
+          once(r"  const \[confirmationResult, setConfirmationResult\] = useState<ConfirmationResult \| null>\(null\)", """  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)
+            const [authMode, setAuthMode] = useState<'backend' | 'firebase'>('backend')""", 'auth mode')
 
-          rep("  useEffect(() => {\n    if (!auth || !db || !firebaseConfigured) return\n", """  useEffect(() => {
+          once(r"  useEffect\(\(\) => \{\n    if \(!auth \|\| !db \|\| !firebaseConfigured\) return", """  useEffect(() => {
             const token = getApiToken()
             const savedUser = getSavedApiUser()
             if (!token || !savedUser) return
@@ -55,25 +57,9 @@ jobs:
 
           useEffect(() => {
             if (getApiToken()) return
-            if (!auth || !db || !firebaseConfigured) return
-          """, 'backend session restore')
+            if (!auth || !db || !firebaseConfigured) return""", 'backend session restore')
 
-          old_request = """  const requestOtp = async (event: React.FormEvent<HTMLFormElement>) => {
-            event.preventDefault()
-            try {
-              const { auth: firebaseAuth } = requireFirebase()
-              if (!recaptchaVerifier.current) recaptchaVerifier.current = new RecaptchaVerifier(firebaseAuth, 'recaptcha-container', { size: 'invisible' })
-              const confirmation = await signInWithPhoneNumber(firebaseAuth, loginContact.trim(), recaptchaVerifier.current)
-              setConfirmationResult(confirmation)
-              setLoginStep('otp')
-              setSmsNotice(`OTP sent to ${loginContact}.`)
-            } catch (error) {
-              recaptchaVerifier.current?.clear()
-              recaptchaVerifier.current = null
-              setSmsNotice(error instanceof Error ? error.message : 'OTP could not be sent.')
-            }
-          }"""
-          new_request = """  const requestOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+          request_new = """  const requestOtp = async (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault()
             try {
               const backendResponse = await fetch(`${API_BASE}/auth/request-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: loginName.trim(), contact: loginContact.trim() }) })
@@ -92,24 +78,11 @@ jobs:
               recaptchaVerifier.current = null
               setSmsNotice(error instanceof Error ? error.message : 'OTP could not be sent.')
             }
-          }"""
-          rep(old_request, new_request, 'requestOtp')
+          }
+          """
+          once(r"  const requestOtp = async .*?\n  const resendOtp", request_new + "  const resendOtp", 'requestOtp')
 
-          old_verify = """  const verifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
-            event.preventDefault()
-            try {
-              if (!confirmationResult) throw new Error('Please request an OTP first.')
-              const result = await confirmationResult.confirm(loginOtp.trim())
-              const { db: firestoreDb } = requireFirebase()
-              await setDoc(doc(firestoreDb, 'users', result.user.uid), { uid: result.user.uid, phoneNumber: result.user.phoneNumber || loginContact.trim(), name: loginName.trim() || 'Apna Cart shopper', email: result.user.email || '', address: customerAddress, updatedAt: serverTimestamp() }, { merge: true })
-              setUser({ name: loginName.trim() || 'Apna Cart shopper', contact: result.user.phoneNumber || loginContact.trim() })
-              setLoginOpen(false)
-              setConfirmationResult(null)
-              setSmsNotice('Login successful. You can now place your order.')
-              if (cart.length > 0) setCheckoutOpen(true)
-            } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'OTP verification failed.') }
-          }"""
-          new_verify = """  const verifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+          verify_new = """  const verifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault()
             try {
               if (authMode === 'backend') {
@@ -140,15 +113,11 @@ jobs:
               setSmsNotice('Login successful. You can now place your order.')
               if (cart.length > 0) setCheckoutOpen(true)
             } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'OTP verification failed.') }
-          }"""
-          rep(old_verify, new_verify, 'verifyOtp')
+          }
+          """
+          once(r"  const verifyOtp = async .*?\n  const variantImage", verify_new + "  const variantImage", 'verifyOtp')
 
-          old_place = """  const placeOrder = async (event: React.FormEvent<HTMLFormElement>) => {
-            event.preventDefault()
-            if (!user || !firebaseUser) { openLogin(); return }
-            try {
-              const { db: firestoreDb } = requireFirebase()"""
-          new_place = """  const placeOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+          place_new = """  const placeOrder = async (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault()
             if (!user) { openLogin(); return }
             const apiToken = getApiToken()
@@ -168,16 +137,9 @@ jobs:
             }
             try {
               const { db: firestoreDb } = requireFirebase()"""
-          rep(old_place, new_place, 'placeOrder')
+          once(r"  const placeOrder = async .*?\n  const updateOrderStatus", place_new + "\n  const updateOrderStatus", 'placeOrder')
 
-          old_update = """  const updateOrderStatus = async (order: OrderItem, index: number, status: string, location: string) => {
-            try {
-              const { db: firestoreDb } = requireFirebase()
-              if (order.orderId) await updateDoc(doc(firestoreDb, 'orders', order.orderId), { status, location })
-              setOrderHistory((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status, location } : item))
-            } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'Order status could not be updated.') }
-          }"""
-          new_update = """  const updateOrderStatus = async (order: OrderItem, index: number, status: string, location: string) => {
+          update_new = """  const updateOrderStatus = async (order: OrderItem, index: number, status: string, location: string) => {
             try {
               const apiToken = getApiToken()
               if (apiToken && order.orderId) {
@@ -190,10 +152,11 @@ jobs:
               }
               setOrderHistory((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, status, location } : item))
             } catch (error) { setSmsNotice(error instanceof Error ? error.message : 'Order status could not be updated.') }
-          }"""
-          rep(old_update, new_update, 'updateOrderStatus')
+          }
+          """
+          once(r"  const updateOrderStatus = async .*?\n  void updateOrderStatus", update_new + "  void updateOrderStatus", 'updateOrderStatus')
 
-          rep("onClick={async () => { if (auth) await signOut(auth); setUser(null); setProfileOpen(false); setSmsNotice('You have been logged out.') }}", "onClick={async () => { if (auth) await signOut(auth); localStorage.removeItem('apna_cart_api_token'); localStorage.removeItem('apna_cart_api_user'); setUser(null); setOrderHistory([]); setProfileOpen(false); setSmsNotice('You have been logged out.') }}", 'logout')
+          once(r"onClick=\{async \(\) => \{ if \(auth\) await signOut\(auth\); setUser\(null\); setProfileOpen\(false\); setSmsNotice\('You have been logged out\.'\) \}\}", "onClick={async () => { if (auth) await signOut(auth); localStorage.removeItem('apna_cart_api_token'); localStorage.removeItem('apna_cart_api_user'); setUser(null); setOrderHistory([]); setProfileOpen(false); setSmsNotice('You have been logged out.') }}", 'logout')
           p.write_text(s)
           PY
       - name: Commit generated integration
