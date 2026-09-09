@@ -1,15 +1,9 @@
-const getApiBase = () => String(process.env.API_BASE_URL || '').replace(/\/$/, '')
+const RENDER_API_BASE = 'https://apna-cart-2rcq.onrender.com'
+
+const getApiBase = () => String(process.env.API_BASE_URL || RENDER_API_BASE).replace(/\/$/, '')
 
 export const handler = async (event) => {
   const base = getApiBase()
-  if (!base) {
-    return {
-      statusCode: 503,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ message: 'Apna Cart API is not connected yet. Set API_BASE_URL to the deployed Express API.' }),
-    }
-  }
-
   const prefix = '/.netlify/functions/api'
   const incomingPath = event.path?.startsWith(prefix) ? event.path.slice(prefix.length) || '/' : '/'
   const target = `${base}${incomingPath}${event.rawQuery ? `?${event.rawQuery}` : ''}`
