@@ -1,3 +1,4 @@
+# Repair retry
 name: Repair Apna Cart frontend integration
 
 on:
@@ -70,8 +71,7 @@ jobs:
           s2, n = re.subn(r"  const placeOrder = async .*?(?=  void updateOrderStatus)", fixed, s, count=1, flags=re.S)
           if n != 1:
               raise SystemExit('Could not find malformed order handler')
-          s = s2
-          p.write_text(s)
+          p.write_text(s2)
           PY
       - name: Commit repair
         run: |
