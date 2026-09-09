@@ -117,22 +117,13 @@ app.get('/api/health', (_request, response) => response.json({ ok: true, service
 app.post('/api/auth/request-otp', async (request, response) => {
   const { name, contact } = request.body || {}
   if (!name?.trim() || !contact?.trim()) return response.status(400).json({ message: 'Name and mobile number or email are required.' })
-
   const cleanContact = normaliseContact(contact)
   const otp = String(crypto.randomInt(100000, 1000000))
-  otpStore.set(cleanContact, {
-    name: name.trim(),
-    otp,
-    expiresAt: Date.now() + 5 * 60 * 1000,
-    attempts: 0,
-  })
-
+  otpStore.set(cleanContact, { name: name.trim(), otp, expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0 })
   try {
     const message = `Your Apna Cart verification code is ${otp}. It expires in 5 minutes.`
     const delivered = isEmail(cleanContact) ? await sendEmail(cleanContact, 'Your Apna Cart OTP', message) : await sendSms(cleanContact, message)
-    if (!delivered && process.env.NODE_ENV === 'production') {
-      return response.status(503).json({ message: 'OTP provider is not configured. Add SMTP or Twilio credentials.' })
-    }
+    if (!delivered && process.env.NODE_ENV === 'production') return response.status(503).json({ message: 'OTP provider is not configured. Add SMTP or Twilio credentials.' })
     if (!delivered) console.log(`[development OTP] ${cleanContact}: ${otp}`)
     return response.json({ message: `OTP sent to ${contact}.` })
   } catch (error) {
@@ -146,10 +137,8 @@ app.post('/api/auth/verify-otp', (request, response) => {
   const cleanContact = normaliseContact(contact || '')
   const record = otpStore.get(cleanContact)
   if (!record || Date.now() > record.expiresAt || record.attempts >= 5) return response.status(400).json({ message: 'OTP expired. Please request a new one.' })
-
   record.attempts += 1
   if (record.otp !== String(otp || '').trim()) return response.status(400).json({ message: 'Incorrect OTP.' })
-
   otpStore.delete(cleanContact)
   const token = crypto.randomBytes(32).toString('hex')
   sessions.set(token, { name: record.name, contact: cleanContact, createdAt: Date.now() })
@@ -159,7 +148,6 @@ app.post('/api/auth/verify-otp', (request, response) => {
 app.get('/api/orders', async (request, response) => {
   const session = getSession(request)
   if (!session) return response.status(401).json({ message: 'Please login again.' })
-
   try {
     const orders = await readOrders()
     return response.json(orders.filter((order) => order.customer?.contact === session.contact))
@@ -172,53 +160,23 @@ app.get('/api/orders', async (request, response) => {
 app.post('/api/orders', async (request, response) => {
   const session = getSession(request)
   if (!session) return response.status(401).json({ message: 'Please login again.' })
-
   const { items, total, address, paymentMethod, phone, email } = request.body || {}
-  if (!Array.isArray(items) || items.length === 0 || !address?.trim() || !phone?.trim()) {
-    return response.status(400).json({ message: 'Order items, phone and address are required.' })
-  }
-
+  if (!Array.isArray(items) || items.length === 0 || !address?.trim() || !phone?.trim()) return response.status(400).json({ message: 'Order items, phone and address are required.' })
   const productTotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0)
   const { commission, sellerAmount } = calculateCommission(productTotal)
   const order = {
-    id: Date.now(),
-    createdAt: new Date().toISOString(),
-    customer: {
-      name: session.name,
-      contact: session.contact,
-      phone: phone.trim(),
-      email: email?.trim() || '',
-    },
-    address: address.trim(),
-    paymentMethod: paymentMethod || 'Cash on Delivery',
-    total: Number(total) || productTotal,
-    productTotal,
-    commission,
-    sellerAmount,
-    platformEarning: commission,
-    earningStatus: 'Pending',
-    items,
-    status: 'Processing',
-    location: 'Order received',
+    id: Date.now(), createdAt: new Date().toISOString(),
+    customer: { name: session.name, contact: session.contact, phone: phone.trim(), email: email?.trim() || '' },
+    address: address.trim(), paymentMethod: paymentMethod || 'Cash on Delivery', total: Number(total) || productTotal,
+    productTotal, commission, sellerAmount, platformEarning: commission, earningStatus: 'Pending', items,
+    status: 'Processing', location: 'Order received',
   }
-
   try {
-    if (ordersCollection) {
-      await ordersCollection.doc(String(order.id)).set(order)
-    } else {
-      const orders = await readOrders()
-      orders.unshift(order)
-      await writeOrders(orders)
-    }
-
+    if (ordersCollection) await ordersCollection.doc(String(order.id)).set(order)
+    else { const orders = await readOrders(); orders.unshift(order); await writeOrders(orders) }
     const itemLines = items.map((item) => `${item.name} x ${item.quantity} - ₹${item.price * item.quantity}`).join('\n')
     const ownerMessage = `New Apna Cart order #${order.id}\n\nCustomer: ${session.name}\nContact: ${session.contact}\nPhone: ${phone}\nEmail: ${email || 'Not provided'}\nAddress: ${address}\nPayment: ${order.paymentMethod}\nTotal: ₹${order.total}\n\nItems:\n${itemLines}`
-    try {
-      await sendEmail(ownerEmail, `New order #${order.id} - Apna Cart`, ownerMessage)
-    } catch (error) {
-      console.error('Owner email failed:', error)
-    }
-
+    try { await sendEmail(ownerEmail, `New order #${order.id} - Apna Cart`, ownerMessage) } catch (error) { console.error('Owner email failed:', error) }
     return response.status(201).json({ order })
   } catch (error) {
     console.error(error)
@@ -229,12 +187,10 @@ app.post('/api/orders', async (request, response) => {
 app.patch('/api/orders/:id/status', async (request, response) => {
   const session = getSession(request)
   if (!session) return response.status(401).json({ message: 'Please login again.' })
-
   const nextStatus = String(request.body?.status || '').trim()
   const nextLocation = String(request.body?.location || '').trim()
   const allowedStatuses = new Set(['Processing', 'Accepted', 'Shipped', 'Delivered'])
   if (!allowedStatuses.has(nextStatus) || !nextLocation) return response.status(400).json({ message: 'Valid status and location are required.' })
-
   try {
     if (ordersCollection) {
       const reference = ordersCollection.doc(request.params.id)
@@ -245,14 +201,11 @@ app.patch('/api/orders/:id/status', async (request, response) => {
       await reference.update({ status: nextStatus, location: nextLocation })
       return response.json({ order: { id: snapshot.id, ...order, status: nextStatus, location: nextLocation } })
     }
-
     const orders = await readOrders()
     const order = orders.find((item) => String(item.id) === request.params.id)
     if (!order) return response.status(404).json({ message: 'Order not found.' })
     if (order.customer?.contact !== session.contact) return response.status(403).json({ message: 'You cannot update this order.' })
-    order.status = nextStatus
-    order.location = nextLocation
-    await writeOrders(orders)
+    order.status = nextStatus; order.location = nextLocation; await writeOrders(orders)
     return response.json({ order })
   } catch (error) {
     console.error(error)
@@ -262,24 +215,15 @@ app.patch('/api/orders/:id/status', async (request, response) => {
 
 app.post('/api/sellers', async (request, response) => {
   if (!sellersCollection) return response.status(503).json({ message: 'Firebase is not configured.' })
-
   const { sellerId, name, email, commissionRate } = request.body || {}
   if (!sellerId || !name || !email) return response.status(400).json({ message: 'sellerId, name and email are required.' })
-
   const rate = Number(commissionRate ?? DEFAULT_COMMISSION_RATE)
   if (rate < 0 || rate > 100) return response.status(400).json({ message: 'Commission rate must be between 0 and 100.' })
-
-  const seller = {
-    sellerId,
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    commissionRate: rate,
-    status: 'active',
-    createdAt: new Date().toISOString(),
-  }
-
+  const seller = { sellerId, name: name.trim(), email: email.trim().toLowerCase(), commissionRate: rate, status: 'active', createdAt: new Date().toISOString() }
   await sellersCollection.doc(sellerId).set(seller)
   return response.status(201).json({ seller })
 })
 
-app.listen(port, () => console.log(`Apna Cart API running at http://localhost:${port}`))
+export { app }
+
+if (process.env.NETLIFY !== 'true') app.listen(port, () => console.log(`Apna Cart API running at http://localhost:${port}`))
