@@ -1,6 +1,4 @@
-const RENDER_API_BASE = 'https://apna-cart-2rcq.onrender.com'
-
-const getApiBase = () => String(process.env.API_BASE_URL || RENDER_API_BASE).replace(/\/$/, '')
+const getApiBase = () => String(process.env.API_BASE_URL || 'https://apna-cart-2rcq.onrender.com').replace(/\/$/, '')
 
 export const handler = async (event) => {
   const base = getApiBase()
@@ -12,14 +10,14 @@ export const handler = async (event) => {
   delete headers.connection
 
   const body = event.body && event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body
-  const response = await fetch(target, {
+  const upstream = await fetch(target, {
     method: event.httpMethod || 'GET',
     headers,
     body: ['GET', 'HEAD'].includes(event.httpMethod || 'GET') ? undefined : body,
   })
 
-  const responseBody = await response.text()
+  const responseBody = await upstream.text()
   const responseHeaders = {}
-  response.headers.forEach((value, key) => { responseHeaders[key] = value })
-  return { statusCode: response.status, headers: responseHeaders, body: responseBody }
+  upstream.headers.forEach((value, key) => { responseHeaders[key] = value })
+  return { statusCode: upstream.status, headers: responseHeaders, body: responseBody }
 }
