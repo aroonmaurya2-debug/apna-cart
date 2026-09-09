@@ -37,7 +37,19 @@ const getFirebaseStore = () => {
 }
 const firestore = getFirebaseStore()
 const ordersCollection = firestore?.collection('orders')
+const sellersCollection = firestore?.collection('sellers')
+const commissionsCollection = firestore?.collection('commissions')
 
+const DEFAULT_COMMISSION_RATE = 10
+
+const calculateCommission = (amount, rate = DEFAULT_COMMISSION_RATE) => {
+  const commission = (amount * rate) / 100
+
+  return {
+    commission: Math.round(commission * 100) / 100,
+    sellerAmount: Math.round((amount - commission) * 100) / 100,
+  }
+}
 app.use(cors({ origin: true }))
 app.use(express.json({ limit: '100kb' }))
 
