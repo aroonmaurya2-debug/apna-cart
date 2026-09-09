@@ -1,4 +1,4 @@
-# Repair retry
+# Repair retry 2
 name: Repair Apna Cart frontend integration
 
 on:
@@ -14,7 +14,6 @@ permissions:
 
 jobs:
   repair:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
