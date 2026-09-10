@@ -14,6 +14,6 @@ createRoot(document.getElementById('root')!).render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=11`, { updateViaCache: 'none' }).catch(() => undefined)
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=12`, { updateViaCache: 'none' }).catch(() => undefined)
   })
 }
