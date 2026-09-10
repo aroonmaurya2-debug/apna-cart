@@ -1,23 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
 
-type Product = { id: number; name: string; category: string; price: number; image: string; rating: number; badge?: string }
+type Product = { id: number; name: string; category: string; price: number; oldPrice: number; image: string; rating: number; reviews: number; discount: string }
 type CartLine = { productId: number; quantity: number }
 type User = { name: string; contact: string }
 type Order = { id: string | number; items: Array<Product & { quantity: number }>; total: number; status: string; location: string; phone: string; email: string; address?: string }
 type PaymentMethod = 'UPI' | 'Card' | 'Net banking' | 'Wallet' | 'Cash on Delivery'
 
 const API_BASE = import.meta.env.DEV ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
+
 const products: Product[] = [
-  { id: 1, name: 'Printed cotton kurti set', category: 'Fashion', price: 499, image: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=800&q=85', rating: 4.5, badge: 'Bestseller' },
-  { id: 2, name: 'Casual sneakers', category: 'Footwear', price: 799, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=85', rating: 4.4 },
-  { id: 3, name: 'Smart watch', category: 'Electronics', price: 1299, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=85', rating: 4.3, badge: 'Popular' },
-  { id: 4, name: 'Kitchen storage set', category: 'Home', price: 599, image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=85', rating: 4.6 },
-  { id: 5, name: 'Cotton bedsheet', category: 'Home', price: 699, image: 'https://images.unsplash.com/photo-1616627561950-9f746e330187?auto=format&fit=crop&w=800&q=85', rating: 4.5 },
-  { id: 6, name: 'Women handbag', category: 'Fashion', price: 449, image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=85', rating: 4.2 },
-  { id: 7, name: 'Bluetooth earbuds', category: 'Electronics', price: 899, image: 'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?auto=format&fit=crop&w=800&q=85', rating: 4.4 },
-  { id: 8, name: 'Men casual shirt', category: 'Fashion', price: 549, image: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=800&q=85', rating: 4.3 },
+  { id: 1, name: 'Printed cotton kurti set', category: 'Fashion', price: 499, oldPrice: 999, image: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=800&q=85', rating: 4.5, reviews: 120, discount: '50% OFF' },
+  { id: 2, name: 'Running Shoes', category: 'Footwear', price: 1999, oldPrice: 3499, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=85', rating: 4.6, reviews: 85, discount: '43% OFF' },
+  { id: 3, name: 'Wireless Headphones', category: 'Electronics', price: 1299, oldPrice: 2499, image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=85', rating: 4.4, reviews: 65, discount: '48% OFF' },
+  { id: 4, name: "Men's Watch", category: 'Fashion', price: 799, oldPrice: 1999, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=85', rating: 4.3, reviews: 92, discount: '60% OFF' },
+  { id: 5, name: 'Backpack', category: 'Fashion', price: 899, oldPrice: 1799, image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=85', rating: 4.2, reviews: 45, discount: '50% OFF' },
+  { id: 6, name: 'Smartphone', category: 'Electronics', price: 12999, oldPrice: 18999, image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=85', rating: 4.5, reviews: 110, discount: '32% OFF' },
+  { id: 7, name: 'Home Decor Plant', category: 'Home', price: 399, oldPrice: 799, image: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=800&q=85', rating: 4.1, reviews: 38, discount: '50% OFF' },
+  { id: 8, name: 'Lipstick', category: 'Beauty', price: 299, oldPrice: 599, image: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?auto=format&fit=crop&w=800&q=85', rating: 4.4, reviews: 72, discount: '50% OFF' },
 ]
-const categories = ['All', 'Fashion', 'Footwear', 'Electronics', 'Home']
+
+const categories = [
+  ['All', '✨'], ['Fashion', '👕'], ['Mobiles', '📱'], ['Electronics', '💻'], ['Home', '🏠'], ['Footwear', '👟'], ['Beauty', '💄'],
+]
 const money = (n: number) => `₹${n.toLocaleString('en-IN')}`
 
 export default function App() {
@@ -60,14 +64,8 @@ export default function App() {
   }
 
   async function loadOrders() {
-    try {
-      const data = await api('/orders')
-      setOrders(data.orders || data || [])
-    } catch (error) {
-      if (error instanceof Error && /login again/i.test(error.message)) {
-        localStorage.removeItem('apna-cart-token')
-        setUser(null)
-      }
+    try { const data = await api('/orders'); setOrders(data.orders || data || []) } catch (error) {
+      if (error instanceof Error && /login again/i.test(error.message)) { localStorage.removeItem('apna-cart-token'); setUser(null) }
     }
   }
 
@@ -76,12 +74,8 @@ export default function App() {
     if (cleanPhone.length < 10) return setMessage('Valid mobile number dijiye.')
     if (!name.trim()) return setMessage('Name dijiye.')
     setLoading(true); setMessage('')
-    try {
-      await api('/auth/request-otp', { method: 'POST', body: JSON.stringify({ name: name.trim(), contact: phone.startsWith('+') ? phone : `+91${cleanPhone}` }) })
-      setMessage('OTP bhej diya gaya. OTP enter karein.')
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'OTP send nahi hua.')
-    }
+    try { await api('/auth/request-otp', { method: 'POST', body: JSON.stringify({ name: name.trim(), contact: phone.startsWith('+') ? phone : `+91${cleanPhone}` }) }); setMessage('OTP bhej diya gaya. OTP enter karein.') }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'OTP send nahi hua.') }
     setLoading(false)
   }
 
@@ -94,13 +88,8 @@ export default function App() {
       if (!data.token) throw new Error('Login token nahi mila.')
       localStorage.setItem('apna-cart-token', data.token)
       const loggedUser = data.user || { name: name.trim() || 'Apna Cart User', contact }
-      setUser(loggedUser)
-      setPhone(loggedUser.contact)
-      setView('home')
-      setMessage('Login successful!')
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'OTP verify nahi hua.')
-    }
+      setUser(loggedUser); setPhone(loggedUser.contact); setView('home'); setMessage('Login successful!')
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'OTP verify nahi hua.') }
     setLoading(false)
   }
 
@@ -108,33 +97,47 @@ export default function App() {
     if (!user) return setView('login')
     if (!address.trim() || phone.replace(/\D/g, '').length < 10) return setMessage('Address aur valid mobile number bhariye.')
     setLoading(true); setMessage('')
-    try {
-      const data = await api('/orders', { method: 'POST', body: JSON.stringify({ customer: user, items: cartItems, total, address, phone, email, paymentMethod: payment }) })
-      setOrders(prev => [data.order, ...prev]); setCart([]); setView('orders'); setMessage('Order place ho gaya!')
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Order place nahi hua.')
-    }
+    try { const data = await api('/orders', { method: 'POST', body: JSON.stringify({ customer: user, items: cartItems, total, address, phone, email, paymentMethod: payment }) }); setOrders(prev => [data.order, ...prev]); setCart([]); setView('orders'); setMessage('Order place ho gaya!') }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Order place nahi hua.') }
     setLoading(false)
   }
 
   async function updateStatus(order: Order, status: string) {
     const location = status === 'Processing' ? 'Order received' : status === 'Accepted' ? 'Order accepted' : status === 'Shipped' ? 'On the way' : 'Delivered'
-    try {
-      const data = await api(`/orders/${order.id}/status`, { method: 'PATCH', body: JSON.stringify({ status, location }) })
-      setOrders(prev => prev.map(x => x.id === order.id ? (data.order || { ...x, status, location }) : x))
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Status update nahi hua.') }
+    try { const data = await api(`/orders/${order.id}/status`, { method: 'PATCH', body: JSON.stringify({ status, location }) }); setOrders(prev => prev.map(x => x.id === order.id ? (data.order || { ...x, status, location }) : x)) }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Status update nahi hua.') }
   }
 
   function logout() { localStorage.removeItem('apna-cart-token'); setUser(null); setOrders([]); setView('home'); setMessage('Logout successful.') }
 
-  const Header = () => <header style={{ position: 'sticky', top: 0, zIndex: 5, background: '#fff', borderBottom: '1px solid #eee', padding: '12px 4%', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><button onClick={() => setView('home')} style={{ fontSize: 22, fontWeight: 800, border: 0, background: 'none' }}>🛍️ Apna Cart</button><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Search products..." style={{ flex: 1, minWidth: 180, padding: 12, border: '1px solid #ddd', borderRadius: 10 }} /><button onClick={() => setView('orders')}>📦 Orders</button><button onClick={() => setView('cart')}>🛒 Cart ({cartCount})</button>{user ? <button onClick={logout}>Logout</button> : <button onClick={() => setView('login')}>Login</button>}</header>
+  const goHome = () => { setView('home'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
-  return <div style={{ minHeight: '100vh', background: '#fafafa', fontFamily: 'Arial,sans-serif', color: '#222' }}><Header /><main style={{ maxWidth: 1200, margin: 'auto', padding: 20 }}>
-    {message && <div style={{ padding: 12, marginBottom: 15, borderRadius: 10, background: '#fff3cd' }}>{message}</div>}
-    {view === 'home' && <><div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 18 }}>{categories.map(c => <button key={c} onClick={() => setCategory(c)} style={{ padding: '10px 18px', borderRadius: 20, border: '1px solid #ddd', background: category === c ? '#222' : '#fff', color: category === c ? '#fff' : '#222' }}>{c}</button>)}</div><section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 18 }}>{filtered.map(p => <article key={p.id} style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #eee' }}><img src={p.image} alt={p.name} style={{ width: '100%', height: 220, objectFit: 'cover' }} /><div style={{ padding: 14 }}><small>{p.category} · ⭐ {p.rating}</small><h3>{p.name}</h3><strong style={{ fontSize: 20 }}>{money(p.price)}</strong>{p.badge && <span style={{ marginLeft: 8, fontSize: 12 }}>• {p.badge}</span>}<button onClick={() => addToCart(p.id)} style={{ width: '100%', marginTop: 12, padding: 12, borderRadius: 9, border: 0, background: '#222', color: '#fff' }}>Add to Cart</button></div></article>)}</section></>}
-    {view === 'cart' && <section><h2>Your Cart</h2>{cartItems.length === 0 ? <p>Cart empty hai.</p> : <>{cartItems.map(item => <div key={item.id} style={{ background: '#fff', padding: 12, marginBottom: 10, borderRadius: 12, display: 'flex', gap: 12, alignItems: 'center' }}><img src={item.image} alt="" style={{ width: 70, height: 70, objectFit: 'cover', borderRadius: 8 }} /><div style={{ flex: 1 }}><b>{item.name}</b><div>{money(item.price)} × {item.quantity}</div></div><button onClick={() => changeQty(item.id, -1)}>-</button><span>{item.quantity}</span><button onClick={() => changeQty(item.id, 1)}>+</button></div>)}<h3>Total: {money(total)}</h3><button onClick={() => user ? setView('checkout') : setView('login')} style={{ padding: 13, width: '100%', maxWidth: 400 }}>Proceed to Checkout</button></>}</section>}
-    {view === 'login' && <section style={{ maxWidth: 480, margin: '40px auto', background: '#fff', padding: 24, borderRadius: 14 }}><h2>Login / Register</h2><input value={name} onChange={e => setName(e.target.value)} placeholder="Name" style={{ width: '100%', padding: 12, marginBottom: 10, boxSizing: 'border-box' }} /><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Mobile number" style={{ width: '100%', padding: 12, marginBottom: 10, boxSizing: 'border-box' }} /><button disabled={loading} onClick={requestOtp} style={{ width: '100%', padding: 12 }}>{loading ? 'Sending...' : 'Send OTP'}</button><input value={otp} onChange={e => setOtp(e.target.value)} placeholder="Enter OTP" style={{ width: '100%', padding: 12, marginTop: 10, boxSizing: 'border-box' }} /><button disabled={loading} onClick={verifyOtp} style={{ width: '100%', padding: 12, marginTop: 10 }}>{loading ? 'Verifying...' : 'Verify & Login'}</button><p style={{ color: '#666', fontSize: 13 }}>OTP backend se send hoga; Firebase billing ki zarurat nahi hai.</p></section>}
-    {view === 'checkout' && <section style={{ maxWidth: 650, margin: 'auto', background: '#fff', padding: 24, borderRadius: 14 }}><h2>Checkout</h2><textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="Full delivery address" rows={4} style={{ width: '100%', padding: 12, boxSizing: 'border-box' }} /><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Mobile number" style={{ width: '100%', padding: 12, marginTop: 10, boxSizing: 'border-box' }} /><input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" style={{ width: '100%', padding: 12, marginTop: 10, boxSizing: 'border-box' }} /><h3>Payment</h3><select value={payment} onChange={e => setPayment(e.target.value as PaymentMethod)} style={{ width: '100%', padding: 12 }}>{(['UPI', 'Card', 'Net banking', 'Wallet', 'Cash on Delivery'] as PaymentMethod[]).map(x => <option key={x}>{x}</option>)}</select><h3>Total: {money(total)}</h3><button disabled={loading} onClick={placeOrder} style={{ width: '100%', padding: 14 }}>Place Order</button></section>}
-    {view === 'orders' && <section><h2>My Orders</h2>{orders.length === 0 ? <p>No orders yet.</p> : orders.map(order => <article key={order.id} style={{ background: '#fff', border: '1px solid #eee', padding: 16, borderRadius: 14, marginBottom: 14 }}><b>Order #{String(order.id).slice(0, 8)}</b><p>Total: {money(order.total)} · Status: <strong>{order.status}</strong></p><p>📍 {order.location || order.address}</p><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{['Processing', 'Accepted', 'Shipped', 'Delivered'].map(s => <button key={s} onClick={() => updateStatus(order, s)}>{s}</button>)}</div></article>)}</section>}
-  </main></div>
+  return <div className="app-shell">
+    <header className="top-header">
+      <button className="brand" onClick={goHome}><span className="brand-bag">🛍️</span><span>Apna <b>Cart</b></span></button>
+      <div className="header-actions"><button className="icon-button" onClick={() => setView('orders')} aria-label="Orders">🔔</button><button className="icon-button" onClick={() => user ? logout() : setView('login')} aria-label="Account">{user ? '👤' : '◉'}</button></div>
+    </header>
+
+    <main className="main-content">
+      <div className="search-box"><span>⌕</span><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Search products, brands and more..." /></div>
+
+      {message && <div className="message">{message}</div>}
+
+      {view === 'home' && <>
+        <section className="category-strip">{categories.map(([label, icon]) => <button key={label} className={`category-item ${category === (label === 'Mobiles' ? 'Electronics' : label) ? 'active' : ''}`} onClick={() => setCategory(label === 'Mobiles' ? 'Electronics' : label)}><span className="category-icon">{icon}</span><span>{label}</span></button>)}</section>
+        <section className="section-heading"><h2>Featured Products</h2><button onClick={() => { setCategory('All'); setQueryText('') }}>View All →</button></section>
+        <section className="product-grid">{filtered.map(p => <article key={p.id} className="product-card"><button className="heart" aria-label="Wishlist">♡</button><img src={p.image} alt={p.name} /><div className="product-info"><h3>{p.name}</h3><div className="rating">⭐ {p.rating} <span>({p.reviews})</span></div><div className="price-row"><strong>{money(p.price)}</strong><del>{money(p.oldPrice)}</del><span className="discount">{p.discount}</span></div><button className="add-button" onClick={() => { addToCart(p.id); setMessage(`${p.name} cart me add ho gaya.`) }}>🛒 Add to Cart</button></div></article>)}</section>
+      </>}
+
+      {view === 'cart' && <section className="page-card"><h2>🛒 Your Cart</h2>{cartItems.length === 0 ? <p>Cart empty hai.</p> : <>{cartItems.map(item => <div className="cart-line" key={item.id}><img src={item.image} alt="" /><div className="cart-detail"><b>{item.name}</b><span>{money(item.price)}</span><div className="qty"><button onClick={() => changeQty(item.id, -1)}>-</button><b>{item.quantity}</b><button onClick={() => changeQty(item.id, 1)}>+</button></div></div></div>)}<div className="cart-total"><span>Total</span><strong>{money(total)}</strong></div><button className="primary-wide" onClick={() => user ? setView('checkout') : setView('login')}>Proceed to Checkout</button></>}</section>}
+
+      {view === 'login' && <section className="form-card"><h2>Login / Register</h2><p className="muted">Apna Cart par shopping shuru karein.</p><input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" /><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Mobile number" /><button className="primary-wide" disabled={loading} onClick={requestOtp}>{loading ? 'Sending...' : 'Send OTP'}</button><input value={otp} onChange={e => setOtp(e.target.value)} placeholder="Enter OTP" /><button className="primary-wide" disabled={loading} onClick={verifyOtp}>{loading ? 'Verifying...' : 'Verify & Login'}</button><p className="muted small">OTP backend se send hoga; Firebase billing ki zarurat nahi hai.</p></section>}
+
+      {view === 'checkout' && <section className="form-card"><h2>📦 Checkout</h2><textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="Full delivery address" rows={4} /><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Mobile number" /><input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" /><label>Payment method</label><select value={payment} onChange={e => setPayment(e.target.value as PaymentMethod)}>{(['UPI', 'Card', 'Net banking', 'Wallet', 'Cash on Delivery'] as PaymentMethod[]).map(x => <option key={x}>{x}</option>)}</select><div className="cart-total"><span>Total</span><strong>{money(total)}</strong></div><button className="primary-wide" disabled={loading} onClick={placeOrder}>{loading ? 'Placing...' : 'Place Order'}</button></section>}
+
+      {view === 'orders' && <section className="page-card"><h2>📦 My Orders</h2>{orders.length === 0 ? <p>No orders yet.</p> : orders.map(order => <article className="order-card" key={order.id}><div className="order-head"><b>Order #{String(order.id).slice(0, 8)}</b><strong>{money(order.total)}</strong></div><p>📍 {order.location || order.address}</p><p>Status: <b>{order.status}</b></p><div className="status-row">{['Processing', 'Accepted', 'Shipped', 'Delivered'].map(s => <button key={s} className={order.status === s ? 'selected' : ''} onClick={() => updateStatus(order, s)}>{s}</button>)}</div></article>)}</section>}
+    </main>
+
+    <nav className="bottom-nav"><button className={view === 'home' ? 'active' : ''} onClick={goHome}><span>⌂</span>Home</button><button className="nav-category" onClick={() => { setView('home'); setCategory('All') }}><span>▦</span>Categories</button><button className={view === 'cart' ? 'active' : ''} onClick={() => setView('cart')}><span>🛒<i>{cartCount}</i></span>Cart</button><button onClick={() => setMessage('Wishlist feature coming soon.')}><span>♡</span>Wishlist</button><button className={view === 'login' || user ? 'active' : ''} onClick={() => user ? logout() : setView('login')}><span>♙</span>{user ? 'Logout' : 'Account'}</button></nav>
+  </div>
 }
