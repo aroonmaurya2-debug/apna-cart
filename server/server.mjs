@@ -46,6 +46,7 @@ const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 const normaliseContact = (value) => value.trim().toLowerCase()
 const getSession = (request) => sessions.get(request.headers.authorization?.replace('Bearer ', ''))
 const isOwner = (session) => Boolean(session && session.contact === ownerEmail.toLowerCase())
+const clean = (value) => String(value ?? '').trim()
 
 const readOrders = async () => {
   if (ordersCollection) { const snapshot = await ordersCollection.orderBy('createdAt', 'desc').get(); return snapshot.docs.map((document) => document.data()) }
@@ -90,15 +91,25 @@ app.get('/api/sellers/me', async (request, response) => {
 app.post('/api/sellers', async (request, response) => {
   const session = getSession(request); if (!session) return response.status(401).json({ message: 'Login required to become a seller.' })
   if (!sellersCollection) return response.status(503).json({ message: 'Firebase is not configured.' })
-  const { name, email } = request.body || {}
-  if (!name?.trim()) return response.status(400).json({ message: 'Shop name is required.' })
-  const cleanEmail = session.contact
-  if (email && normaliseContact(email) !== cleanEmail) return response.status(403).json({ message: 'Seller email must match your logged-in email.' })
-  const existing = await sellersCollection.where('email', '==', cleanEmail).limit(1).get()
+  const body = request.body || {}
+  const seller = {
+    name: clean(body.name), shopName: clean(body.shopName), email: clean(body.email).toLowerCase(), phone: clean(body.phone),
+    pickupAddress: clean(body.pickupAddress), city: clean(body.city), state: clean(body.state), pincode: clean(body.pincode),
+    taxIdType: body.taxIdType === 'UIN' ? 'UIN' : 'GSTIN', taxId: clean(body.taxId), pan: clean(body.pan),
+    bankAccountName: clean(body.bankAccountName), bankAccountNumber: clean(body.bankAccountNumber), ifsc: clean(body.ifsc).toUpperCase()
+  }
+  if (!seller.name || !seller.shopName || !seller.email || !seller.phone || !seller.pickupAddress || !seller.city || !seller.state || !seller.pincode || !seller.taxId || !seller.pan || !seller.bankAccountName || !seller.bankAccountNumber || !seller.ifsc) return response.status(400).json({ message: 'All seller KYC, pickup address and bank details are mandatory.' })
+  if (seller.email !== session.contact && session.contact.includes('@')) return response.status(403).json({ message: 'Seller email must match your logged-in email.' })
+  if (!/^\d{10}$/.test(seller.phone.replace(/\D/g, ''))) return response.status(400).json({ message: 'Valid 10-digit mobile number is required.' })
+  if (!/^\d{6}$/.test(seller.pincode)) return response.status(400).json({ message: 'Valid 6-digit pincode is required.' })
+  if (!/^[A-Z]{5}\d{4}[A-Z]$/.test(seller.pan.toUpperCase())) return response.status(400).json({ message: 'Valid PAN is required.' })
+  if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(seller.ifsc)) return response.status(400).json({ message: 'Valid IFSC code is required.' })
+  if (seller.taxIdType === 'GSTIN' && !/^\d{2}[A-Z0-9]{10}\dZ[A-Z0-9]$/.test(seller.taxId.toUpperCase())) return response.status(400).json({ message: 'Valid GSTIN is required.' })
+  const existing = await sellersCollection.where('email', '==', session.contact).limit(1).get()
   if (!existing.empty) return response.json({ seller: existing.docs[0].data() })
   const sellerId = `seller-${crypto.randomUUID()}`
-  const seller = { sellerId, name: name.trim(), email: cleanEmail, commissionRate: DEFAULT_COMMISSION_RATE, status: 'active', createdAt: new Date().toISOString() }
-  await sellersCollection.doc(sellerId).set(seller); return response.status(201).json({ seller })
+  const savedSeller = { sellerId, ...seller, email: session.contact, commissionRate: DEFAULT_COMMISSION_RATE, status: 'active', kycStatus: 'Pending Review', createdAt: new Date().toISOString() }
+  await sellersCollection.doc(sellerId).set(savedSeller); return response.status(201).json({ seller: savedSeller })
 })
 
 app.post('/api/products', async (request, response) => {
@@ -108,7 +119,7 @@ app.post('/api/products', async (request, response) => {
   const { name, category, price, oldPrice, image, sizes, colors, description } = request.body || {}
   const numericPrice = Number(price); if (!name?.trim() || !category?.trim() || !Number.isFinite(numericPrice) || numericPrice <= 0) return response.status(400).json({ message: 'Product name, category and valid price are required.' })
   const id = `product-${crypto.randomUUID()}`
-  const product = { id, sellerId: sellerSnapshot.docs[0].id, sellerName: sellerSnapshot.docs[0].data().name, name: name.trim(), category: category.trim(), price: numericPrice, oldPrice: Number(oldPrice) > numericPrice ? Number(oldPrice) : numericPrice, image: String(image || '').trim(), sizes: Array.isArray(sizes) ? sizes.slice(0, 20) : [], colors: Array.isArray(colors) ? colors.slice(0, 20) : [], description: String(description || '').trim(), rating: 0, reviews: 0, status: 'active', createdAt: new Date().toISOString() }
+  const product = { id, sellerId: sellerSnapshot.docs[0].id, sellerName: sellerSnapshot.docs[0].data().shopName || sellerSnapshot.docs[0].data().name, name: name.trim(), category: category.trim(), price: numericPrice, oldPrice: Number(oldPrice) > numericPrice ? Number(oldPrice) : numericPrice, image: String(image || '').trim(), sizes: Array.isArray(sizes) ? sizes.slice(0, 20) : [], colors: Array.isArray(colors) ? colors.slice(0, 20) : [], description: String(description || '').trim(), rating: 0, reviews: 0, status: 'active', createdAt: new Date().toISOString() }
   await productsCollection.doc(id).set(product); return response.status(201).json({ product })
 })
 
