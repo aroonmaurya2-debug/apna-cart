@@ -9,7 +9,6 @@ export default function ReferralEarn() {
   const [code, setCode] = useState('')
   const [invites, setInvites] = useState(0)
   const [message, setMessage] = useState('')
-
   const token = () => localStorage.getItem('apna-cart-token')
   const inviteLink = useMemo(() => `${APP_LINK}?ref=${encodeURIComponent(code)}`, [code])
 
@@ -26,6 +25,13 @@ export default function ReferralEarn() {
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Referral data load nahi hua.') }
   }
 
+  useEffect(() => {
+    const referButton = document.querySelector('.refer-pill') as HTMLButtonElement | null
+    if (!referButton) return
+    const openReferral = (event: Event) => { event.preventDefault(); event.stopPropagation(); setOpen(true) }
+    referButton.addEventListener('click', openReferral)
+    return () => referButton.removeEventListener('click', openReferral)
+  }, [])
   useEffect(() => { if (open) void loadReferral() }, [open])
 
   async function inviteWhatsApp() {
@@ -33,8 +39,7 @@ export default function ReferralEarn() {
     const t = token()
     try { if (t) await fetch(`${API}/referrals/invite`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}` }, body: JSON.stringify({ code }) }) } catch { /* sharing can continue */ }
     const text = `🛍️ Apna Cart join karo! Fashion, Home, Beauty aur Electronics ek hi app me. Mere referral link se app open karo: ${inviteLink}`
-    const whatsapp = `https://wa.me/?text=${encodeURIComponent(text)}`
-    window.location.href = whatsapp
+    window.location.href = `https://wa.me/?text=${encodeURIComponent(text)}`
   }
 
   async function shareReferral() {
