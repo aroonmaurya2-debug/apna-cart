@@ -56,6 +56,15 @@
 .filter-row button:active,
 .filter-row select:active { transform:scale(.98); }
 
+/* Product grid: 2-column compact layout as requested */
+.product-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; }
+.product-info { padding:9px !important; }
+.product-info h3 { font-size:13px !important; min-height:35px !important; }
+.product-description { font-size:10px !important; min-height:28px !important; }
+.price-row strong { font-size:16px !important; }
+.discount { font-size:9px !important; }
+.add-button { font-size:12px !important; padding:10px 5px !important; }
+
 @media (max-width:430px) {
   .top-header { padding:8px 10px 9px !important; gap:5px !important; }
   .top-header .header-topline { gap:5px !important; }
