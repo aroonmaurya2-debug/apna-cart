@@ -34,45 +34,30 @@
 .bottom-nav button.active { color:#07985d; }
 .bottom-nav button.active:after { background:#07985d; }
 
-/* Compact premium header */
-.top-header { flex-wrap:nowrap; align-items:center; gap:14px; }
-.top-header .brand { order:1; flex:1 1 auto; min-width:0; }
-.top-header .header-actions { order:2; flex:0 0 auto; align-items:center; gap:7px; }
-.brand { text-decoration:none; }
-.brand > span:last-child { display:flex; flex-direction:column; align-items:flex-start; line-height:1.02; white-space:nowrap; }
-.brand > span:last-child small { display:block; margin-top:4px; font-size:.48em; font-weight:800; color:#315b47; letter-spacing:.1px; }
-.brand .brand-mark { flex:0 0 auto; }
-.header-actions .refer-pill { height:38px; padding:0 12px; border:1px solid #bde8d0; border-radius:13px; background:linear-gradient(180deg,#f7fffa,#eafaf1); color:#0b7048; font-size:13px; font-weight:800; box-shadow:0 3px 10px rgba(8,122,73,.08); }
-.header-actions .icon-button { width:38px; height:38px; border:1px solid #cfe7da; border-radius:12px; background:#f7fcf9; box-shadow:0 3px 9px rgba(17,76,48,.06); font-size:18px; }
-.header-actions .icon-button:hover { background:#e8f8ef; }
-.wallet { font-weight:800; color:#123b2a; }
-
-@media (max-width:800px) {
-  .top-header { height:auto; min-height:82px; padding:9px 12px; gap:8px; }
-  .top-header .brand { min-width:0; }
-  .brand { font-size:22px; gap:7px; }
-  .brand .brand-mark { font-size:28px; }
-  .header-actions { max-width:58%; overflow:hidden; }
-  .header-actions .refer-pill { height:35px; max-width:118px; overflow:hidden; text-overflow:ellipsis; padding:0 9px; font-size:11px; }
-  .header-actions .icon-button { width:34px; height:34px; border-radius:10px; font-size:16px; }
-  .hero-banner { min-height:175px; padding:23px 39% 22px 20px; }
-  .hero-banner h1 { font-size:25px; }
-  .hero-art { right:5%; width:125px; height:115px; font-size:60px; top:30px; }
-  .product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-}
+/* Reliable mobile premium header */
+.top-header { flex-direction:column !important; align-items:stretch !important; justify-content:flex-start !important; gap:7px !important; height:auto !important; min-height:0 !important; padding:9px 12px 10px !important; }
+.top-header .header-topline { width:100% !important; display:flex !important; align-items:center !important; justify-content:space-between !important; gap:7px !important; min-height:38px !important; overflow:hidden !important; }
+.top-header .header-topline .refer-pill { flex:0 1 auto !important; white-space:nowrap !important; height:36px !important; padding:0 11px !important; border:1px solid #bde8d0 !important; border-radius:12px !important; background:linear-gradient(180deg,#f7fffa,#eafaf1) !important; color:#08794d !important; font-size:12px !important; font-weight:800 !important; box-shadow:0 3px 10px rgba(8,122,73,.08) !important; }
+.top-header .header-topline .wallet { flex:0 0 auto !important; white-space:nowrap !important; color:#123b2a !important; font-weight:800 !important; font-size:13px !important; }
+.top-header .header-topline .header-icon,
+.top-header .header-topline .icon-button { flex:0 0 auto !important; width:36px !important; height:36px !important; border:1px solid #cfe7da !important; border-radius:11px !important; background:#f7fcf9 !important; color:#08794d !important; box-shadow:0 3px 9px rgba(17,76,48,.06) !important; font-size:17px !important; padding:0 !important; }
+.top-header > .brand { order:2 !important; width:100% !important; min-width:0 !important; justify-content:center !important; align-items:center !important; gap:7px !important; margin:0 !important; padding:2px 0 0 !important; color:#123b2a !important; font-size:24px !important; line-height:1 !important; }
+.top-header > .brand .brand-mark { flex:0 0 auto !important; font-size:29px !important; }
+.top-header > .brand > span:last-child { display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; line-height:1.02 !important; white-space:nowrap !important; }
+.top-header > .brand > span:last-child small { display:block !important; margin-top:3px !important; font-size:10px !important; font-weight:800 !important; color:#315b47 !important; letter-spacing:.1px !important; }
 
 @media (max-width:430px) {
-  .top-header { min-height:78px; padding:8px 10px; gap:6px; }
-  .brand { font-size:20px; gap:6px; }
-  .brand .brand-mark { font-size:25px; }
-  .brand > span:last-child small { font-size:9px; margin-top:3px; }
-  .header-actions { gap:4px; max-width:59%; }
-  .header-actions .refer-pill { max-width:102px; height:32px; border-radius:10px; padding:0 7px; font-size:10px; }
-  .header-actions .icon-button { width:31px; height:31px; border-radius:9px; font-size:14px; }
+  .top-header { padding:8px 10px 9px !important; gap:5px !important; }
+  .top-header .header-topline { gap:5px !important; }
+  .top-header .header-topline .refer-pill { height:34px !important; padding:0 9px !important; border-radius:10px !important; font-size:11px !important; }
+  .top-header .header-topline .wallet { font-size:12px !important; }
+  .top-header .header-topline .header-icon,
+  .top-header .header-topline .icon-button { width:33px !important; height:33px !important; border-radius:9px !important; font-size:15px !important; }
+  .top-header > .brand { font-size:22px !important; padding-top:1px !important; }
+  .top-header > .brand .brand-mark { font-size:27px !important; }
+  .top-header > .brand > span:last-child small { font-size:9px !important; }
   .hero-banner { min-height:155px; padding:19px 34% 18px 17px; border-radius:16px; }
   .hero-banner h1 { font-size:21px; }
   .hero-banner p { font-size:9px; }
   .hero-art { width:105px; height:92px; font-size:49px; right:3%; top:28px; }
 }
-
-/* Home header refinement: 2026-09-10-v4 */
