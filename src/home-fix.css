@@ -37,7 +37,41 @@
 .bottom-nav button.active { color:#07985d; }
 .bottom-nav button.active:after { background:#07985d; }
 
-@media (max-width:800px) { .hero-banner { min-height:175px; padding:23px 39% 22px 20px; } .hero-banner h1 { font-size:25px; } .hero-art { right:5%; width:125px; height:115px; font-size:60px; top:30px; } .product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:430px) { .hero-banner { min-height:155px; padding:19px 34% 18px 17px; border-radius:16px; } .hero-banner h1 { font-size:21px; } .hero-banner p { font-size:9px; } .hero-art { width:105px; height:92px; font-size:49px; right:3%; top:28px; } }
+/* Mobile header: keep the action row and brand separate so the logo/tagline never overlap. */
+.top-header { flex-wrap:nowrap; }
+.header-topline { width:100%; display:flex; align-items:center; gap:7px; }
+.brand > span:last-child { display:flex; flex-direction:column; align-items:flex-start; line-height:1.05; white-space:nowrap; }
+.brand > span:last-child small { display:block; margin-top:5px; font-size:.62em; font-weight:800; color:#123b2a; }
+.brand .brand-mark { flex:0 0 auto; }
+.refer-pill { white-space:nowrap; }
+.wallet { white-space:nowrap; }
+.header-icon { flex:0 0 auto; }
 
-/* Cache-busting marker: 2026-09-10-home-ui-v2 */
+@media (max-width:800px) {
+  .top-header { height:auto; min-height:112px; padding:8px 16px 10px; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:7px; }
+  .header-topline { min-height:38px; justify-content:flex-start; }
+  .brand { width:100%; justify-content:center; font-size:25px; min-height:52px; }
+  .brand > span:last-child { align-items:flex-start; }
+  .main-content { padding-top:2px; }
+  .hero-banner { min-height:175px; padding:23px 39% 22px 20px; }
+  .hero-banner h1 { font-size:25px; }
+  .hero-art { right:5%; width:125px; height:115px; font-size:60px; top:30px; }
+  .product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width:430px) {
+  .top-header { min-height:124px; padding:7px 12px 9px; gap:6px; }
+  .header-topline { gap:5px; overflow:hidden; }
+  .refer-pill { font-size:12px; padding:7px 9px; }
+  .wallet { font-size:13px; }
+  .header-icon { width:36px; height:36px; padding:0; }
+  .brand { font-size:22px; gap:8px; min-height:55px; }
+  .brand .brand-mark { font-size:28px; }
+  .brand > span:last-child small { font-size:11px; margin-top:4px; }
+  .hero-banner { min-height:155px; padding:19px 34% 18px 17px; border-radius:16px; }
+  .hero-banner h1 { font-size:21px; }
+  .hero-banner p { font-size:9px; }
+  .hero-art { width:105px; height:92px; font-size:49px; right:3%; top:28px; }
+}
+
+/* Cache-busting marker: 2026-09-10-home-ui-v3-header-fix */
