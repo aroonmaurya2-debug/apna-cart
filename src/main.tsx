@@ -16,11 +16,12 @@ createRoot(document.getElementById('root')!).render(
 function setSearchInput(input: HTMLInputElement, text: string) {
   const value = text.trim()
   if (!value) return
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
-  setter?.call(input, value)
-  input.dispatchEvent(new Event('input', { bubbles: true }))
-  input.dispatchEvent(new Event('change', { bubbles: true }))
   input.focus()
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+  if (setter) setter.call(input, value)
+  else input.value = value
+  input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }))
+  input.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
 function loadTesseract() {
@@ -39,21 +40,11 @@ function loadTesseract() {
 function productKeyword(text: string) {
   const normalized = text.toLowerCase()
   const aliases: Array<[RegExp, string]> = [
-    [/saree|sari|silk/, 'saree'],
-    [/kurti|kurta|ethnic/, 'kurti'],
-    [/dress|gown/, 'dress'],
-    [/shirt|t-?shirt/, 'shirt'],
-    [/top/, 'top'],
-    [/necklace|jewell?ery|earring/, 'necklace'],
-    [/watch/, 'watch'],
-    [/cookware|kitchen|pan|steel/, 'pan'],
-    [/kids?|child|children/, 'kids'],
-    [/plant|indoor/, 'plant'],
-    [/cushion|cover/, 'cushion'],
-    [/lipstick|makeup|cosmetic/, 'lipstick'],
-    [/shoe|sneaker|running/, 'shoes'],
-    [/headphone|earphone/, 'headphones'],
-    [/smartphone|mobile|phone/, 'smartphone'],
+    [/saree|sari|silk/, 'saree'], [/kurti|kurta|ethnic/, 'kurti'], [/dress|gown/, 'dress'],
+    [/shirt|t-?shirt/, 'shirt'], [/top/, 'top'], [/necklace|jewell?ery|earring/, 'necklace'],
+    [/watch/, 'watch'], [/cookware|kitchen|pan|steel/, 'pan'], [/kids?|child|children/, 'kids'],
+    [/plant|indoor/, 'plant'], [/cushion|cover/, 'cushion'], [/lipstick|makeup|cosmetic/, 'lipstick'],
+    [/shoe|sneaker|running/, 'shoes'], [/headphone|earphone/, 'headphones'], [/smartphone|mobile|phone/, 'smartphone'],
   ]
   return aliases.find(([pattern]) => pattern.test(normalized))?.[1] || text.trim().split(/\s+/).slice(0, 4).join(' ')
 }
@@ -65,7 +56,6 @@ async function readCameraImage(file: File) {
     reader.onerror = () => reject(reader.error || new Error('Image read failed'))
     reader.readAsDataURL(file)
   })
-
   if ('BarcodeDetector' in window) {
     try {
       const Detector = (window as any).BarcodeDetector
@@ -77,14 +67,12 @@ async function readCameraImage(file: File) {
       if (barcodes?.[0]?.rawValue) return barcodes[0].rawValue
     } catch { /* OCR fallback */ }
   }
-
   try {
     const Tesseract = await loadTesseract()
     const result = await Tesseract.recognize(dataUrl, 'eng')
     const text = String(result?.data?.text || '').replace(/\s+/g, ' ').trim()
     if (text) return productKeyword(text)
   } catch { /* filename fallback */ }
-
   return productKeyword(file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim())
 }
 
@@ -92,34 +80,43 @@ function setupSearchTools() {
   const searchBox = document.querySelector('.search-box') as HTMLElement | null
   const input = searchBox?.querySelector('input') as HTMLInputElement | null
   if (!searchBox || !input) return
-
   const mic = searchBox.querySelector('button[aria-label="Voice search"]') as HTMLButtonElement | null
   const camera = searchBox.querySelector('button[aria-label="Camera search"], button[aria-label="Search with camera"]') as HTMLButtonElement | null
   if (!mic || !camera) return
-  mic.classList.add('search-action')
-  camera.classList.add('search-action')
+  mic.classList.add('search-action'); camera.classList.add('search-action')
 
   if (!mic.dataset.voiceBound) {
     mic.dataset.voiceBound = 'true'
     mic.title = 'Voice search'
-    mic.addEventListener('click', () => {
+    mic.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
       if (!SpeechRecognition) {
-        alert('Voice typing is not supported in this browser.')
+        input.focus()
+        alert('Is browser me voice typing support nahi hai. Chrome me app kholkar mic try karein.')
         return
       }
       const recognition = new SpeechRecognition()
       recognition.lang = 'hi-IN'
       recognition.interimResults = false
-      recognition.maxAlternatives = 1
-      recognition.onstart = () => { input.placeholder = 'Listening...' }
+      recognition.continuous = false
+      recognition.maxAlternatives = 3
+      recognition.onstart = () => { input.placeholder = '🎙️ Bolna shuru karein...' }
       recognition.onresult = (event: any) => {
-        setSearchInput(input, event.results?.[0]?.[0]?.transcript || '')
+        const transcript = String(event.results?.[0]?.[0]?.transcript || '').trim()
         input.placeholder = 'Search by Keyword or Product ID'
+        if (transcript) setSearchInput(input, transcript)
       }
-      recognition.onerror = () => { input.placeholder = 'Search by Keyword or Product ID' }
+      recognition.onerror = (event: any) => {
+        input.placeholder = 'Search by Keyword or Product ID'
+        const code = String(event?.error || '')
+        if (code === 'not-allowed' || code === 'service-not-allowed') alert('Microphone permission allow karein, phir mic dobara dabayein.')
+        else if (code === 'no-speech') alert('Kuch suna nahi gaya. Mic dabakar dobara boliye.')
+        else alert('Voice search start nahi hua. Chrome me dobara try karein.')
+      }
       recognition.onend = () => { input.placeholder = 'Search by Keyword or Product ID' }
-      recognition.start()
+      try { recognition.start() } catch { input.placeholder = 'Search by Keyword or Product ID'; alert('Voice search dobara try karein.') }
     })
   }
 
@@ -129,30 +126,18 @@ function setupSearchTools() {
     let cameraInput = searchBox.querySelector('.camera-capture-input') as HTMLInputElement | null
     if (!cameraInput) {
       cameraInput = document.createElement('input')
-      cameraInput.type = 'file'
-      cameraInput.accept = 'image/*'
-      cameraInput.setAttribute('capture', 'environment')
-      cameraInput.className = 'camera-capture-input'
-      cameraInput.style.display = 'none'
+      cameraInput.type = 'file'; cameraInput.accept = 'image/*'; cameraInput.setAttribute('capture', 'environment')
+      cameraInput.className = 'camera-capture-input'; cameraInput.style.display = 'none'
       cameraInput.addEventListener('change', async () => {
         const file = cameraInput?.files?.[0]
         if (!file) return
         input.placeholder = 'Searching from photo...'
         try {
           const query = await readCameraImage(file)
-          if (query) {
-            setSearchInput(input, query)
-            input.placeholder = 'Search by Keyword or Product ID'
-          } else {
-            input.placeholder = 'Search by Keyword or Product ID'
-            alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.')
-          }
-        } catch {
-          input.placeholder = 'Search by Keyword or Product ID'
-          alert('Photo search failed. Dobara try karein.')
-        } finally {
-          if (cameraInput) cameraInput.value = ''
-        }
+          if (query) setSearchInput(input, query)
+          else alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.')
+        } catch { alert('Photo search failed. Dobara try karein.') }
+        finally { input.placeholder = 'Search by Keyword or Product ID'; if (cameraInput) cameraInput.value = '' }
       })
       searchBox.appendChild(cameraInput)
     }
@@ -164,19 +149,12 @@ function setupReferenceHome() {
   const hero = document.querySelector('.hero-banner') as HTMLElement | null
   if (hero && !hero.dataset.swipeReady) {
     const originalButton = hero.querySelector('button') as HTMLButtonElement | null
-    const carousel = document.createElement('div')
-    carousel.className = 'hero-swipe'
-    carousel.dataset.swipeReady = 'true'
+    const carousel = document.createElement('div'); carousel.className = 'hero-swipe'; carousel.dataset.swipeReady = 'true'
     const slides = [hero, hero.cloneNode(true) as HTMLElement, hero.cloneNode(true) as HTMLElement]
-    const titles = [
-      ['Best Quality', 'Lowest Prices', 'Fashion  |  Home  |  Beauty  |  More'],
-      ['Great Deals', 'Everyday Value', 'Fashion  |  Home  |  Beauty  |  More'],
-      ['Apna Cart', 'Har Ghar Ki Zarurat', 'Shop smart  |  Save more  |  Easy shopping'],
-    ]
+    const titles = [['Best Quality', 'Lowest Prices', 'Fashion  |  Home  |  Beauty  |  More'], ['Great Deals', 'Everyday Value', 'Fashion  |  Home  |  Beauty  |  More'], ['Apna Cart', 'Har Ghar Ki Zarurat', 'Shop smart  |  Save more  |  Easy shopping']]
     slides.forEach((slide, index) => {
       slide.dataset.swipeReady = 'true'
-      const h1 = slide.querySelector('h1')
-      const p = slide.querySelector('p')
+      const h1 = slide.querySelector('h1'); const p = slide.querySelector('p')
       if (h1) h1.innerHTML = `${titles[index][0]}<br /><b>${titles[index][1]}</b>`
       if (p) p.textContent = titles[index][2]
       const button = slide.querySelector('button') as HTMLButtonElement | null
@@ -185,39 +163,25 @@ function setupReferenceHome() {
     })
     hero.replaceWith(carousel)
   }
-
   const categories = document.querySelector('.category-strip') as HTMLElement | null
   if (categories) categories.dataset.swipeReady = 'true'
-
   const headerLine = document.querySelector('.header-topline') as HTMLElement | null
   if (headerLine && !headerLine.querySelector('.notification-head')) {
-    const cart = headerLine.querySelector('.cart-head')
-    const bell = document.createElement('button')
-    bell.type = 'button'
-    bell.className = 'header-icon notification-head'
-    bell.setAttribute('aria-label', 'Notifications')
-    bell.title = 'Notifications'
-    bell.textContent = '🔔'
+    const cart = headerLine.querySelector('.cart-head'); const bell = document.createElement('button')
+    bell.type = 'button'; bell.className = 'header-icon notification-head'; bell.setAttribute('aria-label', 'Notifications'); bell.title = 'Notifications'; bell.textContent = '🔔'
     bell.addEventListener('click', () => alert('No new notifications'))
-    if (cart) headerLine.insertBefore(bell, cart)
-    else headerLine.appendChild(bell)
+    if (cart) headerLine.insertBefore(bell, cart); else headerLine.appendChild(bell)
   }
 }
 
 if (typeof window !== 'undefined') {
-  const observer = new MutationObserver(() => {
-    setupSearchTools()
-    setupReferenceHome()
-  })
+  const observer = new MutationObserver(() => { setupSearchTools(); setupReferenceHome() })
   observer.observe(document.body, { childList: true, subtree: true })
-  window.addEventListener('load', () => {
-    setupSearchTools()
-    setupReferenceHome()
-  })
+  window.addEventListener('load', () => { setupSearchTools(); setupReferenceHome() })
 }
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=17`, { updateViaCache: 'none' }).catch(() => undefined)
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=18`, { updateViaCache: 'none' }).catch(() => undefined)
   })
 }
