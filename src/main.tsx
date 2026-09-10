@@ -2,15 +2,17 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './AppFixed.tsx'
+import MarketplaceFeatures from './MarketplaceFeatures.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
+    <MarketplaceFeatures />
   </StrictMode>,
 )
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=10`, { updateViaCache: 'none' }).catch(() => undefined)
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=11`, { updateViaCache: 'none' }).catch(() => undefined)
   })
 }
