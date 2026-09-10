@@ -65,7 +65,11 @@ export default function App() {
 
   const productGender = (p: Product) => p.gender || (p.category === 'Men' || /\bmen'?s?\b/i.test(p.name) ? 'Men' : p.category === 'Kids' || /\bkids?\b/i.test(p.name) ? 'Kids' : p.category === 'All Categories' && /smartphone|headphones/i.test(p.name) ? 'Unisex' : 'Women')
   const filtered = useMemo(() => {
-    const list = products.filter(p => (category === 'All' || p.category === category) && (gender === 'All' || productGender(p) === gender) && p.name.toLowerCase().includes(queryText.toLowerCase()))
+    const q = queryText.trim().toLowerCase()
+    const list = products.filter(p => {
+      const searchable = `${p.name} ${p.category} ${p.gender || ''} ${p.description} ${p.id}`.toLowerCase()
+      return (category === 'All' || p.category === category) && (gender === 'All' || productGender(p) === gender) && (!q || searchable.includes(q))
+    })
     return [...list].sort((a, b) => sortBy === 'price-low' ? a.price - b.price : sortBy === 'price-high' ? b.price - a.price : sortBy === 'rating' ? b.rating - a.rating : sortBy === 'discount' ? ((b.oldPrice - b.price) / Math.max(b.oldPrice, 1)) - ((a.oldPrice - a.price) / Math.max(a.oldPrice, 1)) : 0)
   }, [category, gender, queryText, sortBy])
   const cartItems = cart.map(line => ({ ...products.find(p => p.id === line.productId)!, quantity: line.quantity })).filter(Boolean)
@@ -94,7 +98,7 @@ export default function App() {
       <button className="brand" onClick={goHome}><span className="brand-mark">🛒</span><span><b>Apna Cart</b><small>Har Ghar Ki Zarurat</small></span></button>
     </header>
     <main className="main-content">
-      <div className="search-box"><span>⌕</span><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Search by Keyword or Product ID" /><button onClick={() => setMessage('Voice search coming soon.')} aria-label="Voice search">🎙</button><button onClick={() => setMessage('Camera search coming soon.')} aria-label="Camera search">▣</button></div>
+      <div className="search-box"><span>⌕</span><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Search by Keyword or Product ID" /><button onClick={() => setMessage('Voice search start karne ke liye mic dabaiye.')} aria-label="Voice search">🎙</button><button onClick={() => setMessage('Camera open karne ke liye camera dabaiye.')} aria-label="Camera search">▣</button></div>
       {message && <div className="message">{message}</div>}
       {view === 'home' && <>
         <section className="hero-banner"><div><span>APNA CART SPECIAL</span><h1>Best Quality<br /><b>Lowest Prices</b></h1><p>Fashion&nbsp; | &nbsp;Home&nbsp; | &nbsp;Beauty&nbsp; | &nbsp;More</p><button onClick={() => { setCategory('All'); setGender('All'); setSortBy('relevance'); setQueryText('') }}>Shop Now →</button></div><div className="hero-art">🛍️</div><div className="hero-dots">● ○ ○ ○</div></section>
