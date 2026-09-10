@@ -10,11 +10,11 @@ export default function ReferralEarn() {
   const [invites, setInvites] = useState(0)
   const [message, setMessage] = useState('')
   const token = () => localStorage.getItem('apna-cart-token')
-  const inviteLink = useMemo(() => `${APP_LINK}?ref=${encodeURIComponent(code)}`, [code])
+  const inviteLink = useMemo(() => code ? `${APP_LINK}?ref=${encodeURIComponent(code)}` : APP_LINK, [code])
 
   async function loadReferral() {
     const t = token()
-    if (!t) return setMessage('Refer & Earn use karne ke liye pehle login karein.')
+    if (!t) return setMessage('Login ke bina bhi app link share kar sakte hain. Referral reward ke liye login karein.')
     try {
       const response = await fetch(`${API}/referrals/me`, { headers: { authorization: `Bearer ${t}` } })
       const data = await response.json()
@@ -34,34 +34,32 @@ export default function ReferralEarn() {
   }, [])
   useEffect(() => { if (open) void loadReferral() }, [open])
 
-  async function inviteWhatsApp() {
-    if (!code) return setMessage('Pehle login karke referral link generate karein.')
-    const t = token()
-    try {
-      if (t) await fetch(`${API}/referrals/invite`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}` }, body: JSON.stringify({ code }) })
-    } catch { /* sharing can continue */ }
-
-    const text = `🛍️ Apna Cart join karo! Fashion, Home, Beauty aur Electronics ek hi app me. Mere referral link se app open karo: ${inviteLink}`
+  function inviteWhatsApp() {
+    const text = code
+      ? `🛍️ Apna Cart join karo! Fashion, Home, Beauty aur Electronics ek hi app me. Mere referral link se app open karo: ${inviteLink}`
+      : `🛍️ Apna Cart join karo! Fashion, Home, Beauty aur Electronics ek hi app me. App yahan se open karo: ${APP_LINK}`
     const encoded = encodeURIComponent(text)
 
-    // Android/iOS WhatsApp app chooser: opens WhatsApp's contact/chat selection with the message prefilled.
-    const appUrl = `whatsapp://send?text=${encoded}`
-    const webUrl = `https://api.whatsapp.com/send?text=${encoded}`
-    let opened = false
-    const onVisibility = () => { opened = true }
-    document.addEventListener('visibilitychange', onVisibility, { once: true })
-    window.location.href = appUrl
-    window.setTimeout(() => {
-      document.removeEventListener('visibilitychange', onVisibility)
-      if (!opened) window.location.href = webUrl
-    }, 1200)
+    // Open WhatsApp immediately from the user's tap. This avoids popup blockers and opens
+    // WhatsApp's contact/chat chooser with the message and app link pre-filled.
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encoded}`
+    window.location.href = whatsappUrl
+
+    // Record the invite when the user is logged in. Sharing itself does not depend on this call.
+    const t = token()
+    if (t && code) {
+      void fetch(`${API}/referrals/invite`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${t}` },
+        body: JSON.stringify({ code })
+      }).catch(() => {})
+    }
   }
 
   async function shareReferral() {
-    if (!code) return setMessage('Pehle login karke referral link generate karein.')
-    const text = `Apna Cart par shopping karo. Mere invite link se join karo: ${inviteLink}`
+    const text = code ? `Apna Cart par shopping karo. Mere invite link se join karo: ${inviteLink}` : `Apna Cart par shopping karo: ${APP_LINK}`
     if (navigator.share) { try { await navigator.share({ title: 'Apna Cart - Invite & Earn', text, url: inviteLink }); return } catch { return } }
-    try { await navigator.clipboard.writeText(inviteLink); setMessage('Referral link copy ho gaya.') } catch { setMessage(inviteLink) }
+    try { await navigator.clipboard.writeText(inviteLink); setMessage('App/referral link copy ho gaya.') } catch { setMessage(inviteLink) }
   }
 
   return <>
@@ -73,7 +71,7 @@ export default function ReferralEarn() {
         <div className="referral-rewards">{[1, 2, 3, 4].map(n => <div className="reward" key={n}><strong>₹73</strong><span>🔒</span><small>{n}{n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'} Invite</small></div>)}</div>
         <div className="referral-friends"><div className="friends-icon">👥</div><h2>Who can you invite?</h2><p>Friends ko Apna Cart par invite karein aur eligible invite activity complete hone par rewards unlock karein.</p><div className="referral-code">Your referral code: <b>{code || 'LOGIN REQUIRED'}</b></div><div className="referral-count">Successful invites: <b>{invites}</b></div></div>
         {message && <div className="referral-message">{message}</div>}
-        <div className="referral-bottom"><button className="whatsapp-btn" onClick={inviteWhatsApp}>🟢 Invite Via WhatsApp</button><button className="share-btn" onClick={shareReferral} aria-label="Share referral link">⌯</button></div>
+        <div className="referral-bottom"><button type="button" className="whatsapp-btn" onClick={inviteWhatsApp}>🟢 Invite Via WhatsApp</button><button type="button" className="share-btn" onClick={shareReferral} aria-label="Share referral link">⌯</button></div>
       </section>
     </div>}
   </>
