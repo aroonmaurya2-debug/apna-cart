@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth'
-import { addDoc, collection, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { auth, db, firebaseConfigured, requireFirebase } from './firebase'
 
 type Product = { id: number; name: string; category: string; price: number; image: string; rating: number; badge?: string }
 type CartLine = { productId: number; quantity: number }
 type User = { name: string; contact: string }
-type Order = { id: string; items: Array<Product & { quantity: number }>; total: number; status: string; location: string; phone: string; email: string }
+type Order = { id: string; items: Array<Product & { quantity: number }>; total: number; status: string; location: string; phone: string; email: string; address?: string }
 
 type PaymentMethod = 'UPI' | 'Card' | 'Net banking' | 'Wallet' | 'Cash on Delivery'
 
