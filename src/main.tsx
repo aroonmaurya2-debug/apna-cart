@@ -85,6 +85,16 @@ function setupSearchTools() {
   if (!mic || !camera) return
   mic.classList.add('search-action'); camera.classList.add('search-action')
 
+  // Premium inline SVG icons — no emoji and no extra + button.
+  if (!mic.dataset.iconReady) {
+    mic.dataset.iconReady = 'true'
+    mic.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><rect x="8" y="3" width="8" height="12" rx="4" stroke="currentColor" stroke-width="2"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+  }
+  if (!camera.dataset.iconReady) {
+    camera.dataset.iconReady = 'true'
+    camera.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.4-2h5.2L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.5" stroke="currentColor" stroke-width="1.8"/></svg>'
+  }
+
   if (!mic.dataset.voiceBound) {
     mic.dataset.voiceBound = 'true'
     mic.title = 'Voice search'
@@ -124,57 +134,61 @@ function setupSearchTools() {
     camera.dataset.cameraBound = 'true'
     camera.title = 'Search with camera'
     let cameraInput = searchBox.querySelector('.camera-capture-input') as HTMLInputElement | null
+    let galleryInput = searchBox.querySelector('.gallery-upload-input') as HTMLInputElement | null
+
+    const processImage = async (file: File | undefined, placeholder: string) => {
+      if (!file) return
+      input.placeholder = placeholder
+      try {
+        const query = await readCameraImage(file)
+        if (query) setSearchInput(input, query)
+        else alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.')
+      } catch { alert('Photo search failed. Dobara try karein.') }
+      finally { input.placeholder = 'Search by Keyword or Product ID' }
+    }
+
     if (!cameraInput) {
       cameraInput = document.createElement('input')
       cameraInput.type = 'file'; cameraInput.accept = 'image/*'; cameraInput.setAttribute('capture', 'environment')
       cameraInput.className = 'camera-capture-input'; cameraInput.style.display = 'none'
       cameraInput.addEventListener('change', async () => {
         const file = cameraInput?.files?.[0]
-        if (!file) return
-        input.placeholder = 'Searching from photo...'
-        try {
-          const query = await readCameraImage(file)
-          if (query) setSearchInput(input, query)
-          else alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.')
-        } catch { alert('Photo search failed. Dobara try karein.') }
-        finally { input.placeholder = 'Search by Keyword or Product ID'; if (cameraInput) cameraInput.value = '' }
+        await processImage(file, 'Searching from camera photo...')
+        if (cameraInput) cameraInput.value = ''
       })
       searchBox.appendChild(cameraInput)
     }
-    camera.addEventListener('click', () => cameraInput?.click())
-  }
 
-  // Add a + button immediately to the right of the camera icon for phone gallery upload.
-  if (!searchBox.querySelector('button[aria-label="Gallery upload"]')) {
-    const galleryButton = document.createElement('button')
-    galleryButton.type = 'button'
-    galleryButton.className = 'search-action gallery-upload'
-    galleryButton.setAttribute('aria-label', 'Gallery upload')
-    galleryButton.title = 'Upload photo from gallery'
-    galleryButton.textContent = '＋'
+    if (!galleryInput) {
+      galleryInput = document.createElement('input')
+      galleryInput.type = 'file'; galleryInput.accept = 'image/*'
+      galleryInput.className = 'gallery-upload-input'; galleryInput.style.display = 'none'
+      galleryInput.addEventListener('change', async () => {
+        const file = galleryInput?.files?.[0]
+        await processImage(file, 'Searching from gallery photo...')
+        if (galleryInput) galleryInput.value = ''
+      })
+      searchBox.appendChild(galleryInput)
+    }
 
-    const galleryInput = document.createElement('input')
-    galleryInput.type = 'file'
-    galleryInput.accept = 'image/*'
-    galleryInput.className = 'gallery-upload-input'
-    galleryInput.style.display = 'none'
-    galleryInput.addEventListener('change', async () => {
-      const file = galleryInput.files?.[0]
-      if (!file) return
-      input.placeholder = 'Searching from gallery photo...'
-      try {
-        const query = await readCameraImage(file)
-        if (query) setSearchInput(input, query)
-        else alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.')
-      } catch { alert('Gallery photo search failed. Dobara try karein.') }
-      finally { input.placeholder = 'Search by Keyword or Product ID'; galleryInput.value = '' }
+    const menu = document.createElement('div')
+    menu.className = 'camera-source-menu'
+    menu.setAttribute('role', 'menu')
+    menu.innerHTML = '<button type="button" role="menuitem" data-source="camera"><span class="camera-source-icon">⌾</span><span><b>Camera</b><small>Take a photo</small></span></button><button type="button" role="menuitem" data-source="gallery"><span class="camera-source-icon">▧</span><span><b>Gallery</b><small>Choose a photo</small></span></button>'
+    searchBox.appendChild(menu)
+
+    const closeMenu = () => menu.classList.remove('open')
+    menu.querySelector('[data-source="camera"]')?.addEventListener('click', (event) => {
+      event.preventDefault(); event.stopPropagation(); closeMenu(); cameraInput?.click()
     })
-    searchBox.insertBefore(galleryButton, searchBox.querySelector('button[aria-label="Camera search"], button[aria-label="Search with camera"]')?.nextSibling || null)
-    searchBox.appendChild(galleryInput)
-    galleryButton.addEventListener('click', (event) => {
-      event.preventDefault()
-      event.stopPropagation()
-      galleryInput.click()
+    menu.querySelector('[data-source="gallery"]')?.addEventListener('click', (event) => {
+      event.preventDefault(); event.stopPropagation(); closeMenu(); galleryInput?.click()
+    })
+    camera.addEventListener('click', (event) => {
+      event.preventDefault(); event.stopPropagation(); menu.classList.toggle('open')
+    })
+    document.addEventListener('click', (event) => {
+      if (!searchBox.contains(event.target as Node)) closeMenu()
     })
   }
 }
