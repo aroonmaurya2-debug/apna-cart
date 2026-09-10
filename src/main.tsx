@@ -85,7 +85,6 @@ function setupSearchTools() {
   if (!mic || !camera) return
   mic.classList.add('search-action'); camera.classList.add('search-action')
 
-  // Premium inline SVG icons — no emoji and no extra + button.
   if (!mic.dataset.iconReady) {
     mic.dataset.iconReady = 'true'
     mic.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><rect x="8" y="3" width="8" height="12" rx="4" stroke="currentColor" stroke-width="2"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
@@ -99,22 +98,24 @@ function setupSearchTools() {
     mic.dataset.voiceBound = 'true'
     mic.title = 'Voice search'
     mic.addEventListener('click', (event) => {
-      event.preventDefault()
-      event.stopPropagation()
+      event.preventDefault(); event.stopPropagation()
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-      if (!SpeechRecognition) {
-        input.focus()
-        alert('Is browser me voice typing support nahi hai. Chrome me app kholkar mic try karein.')
-        return
-      }
+      if (!SpeechRecognition) { input.focus(); alert('Is browser me voice typing support nahi hai. Chrome me app kholkar mic try karein.'); return }
       const recognition = new SpeechRecognition()
-      recognition.lang = 'hi-IN'
+      // Hinglish-friendly: listen for Hindi/English words, then normalize common Hindi shopping words to English search terms.
+      recognition.lang = 'en-IN'
       recognition.interimResults = false
       recognition.continuous = false
       recognition.maxAlternatives = 3
       recognition.onstart = () => { input.placeholder = '🎙️ Bolna shuru karein...' }
       recognition.onresult = (event: any) => {
-        const transcript = String(event.results?.[0]?.[0]?.transcript || '').trim()
+        let transcript = String(event.results?.[0]?.[0]?.transcript || '').trim()
+        const replacements: Array<[RegExp, string]> = [
+          [/साड़ी|साड़ी|saree/gi, 'saree'], [/कुर्ती|कुर्ता/gi, 'kurti'], [/शर्ट/gi, 'shirt'], [/जूते|जूता/gi, 'shoes'],
+          [/घड़ी|घड़ी/gi, 'watch'], [/मोबाइल|फोन/gi, 'mobile'], [/हेडफोन|ईयरफोन/gi, 'headphones'], [/लिपस्टिक/gi, 'lipstick'],
+          [/हार|नेकलेस/gi, 'necklace'], [/ड्रेस/gi, 'dress'], [/टॉप/gi, 'top'], [/पैन|कड़ाही|किचन/gi, 'pan'],
+        ]
+        replacements.forEach(([pattern, replacement]) => { transcript = transcript.replace(pattern, replacement) })
         input.placeholder = 'Search by Keyword or Product ID'
         if (transcript) setSearchInput(input, transcript)
       }
@@ -135,61 +136,31 @@ function setupSearchTools() {
     camera.title = 'Search with camera'
     let cameraInput = searchBox.querySelector('.camera-capture-input') as HTMLInputElement | null
     let galleryInput = searchBox.querySelector('.gallery-upload-input') as HTMLInputElement | null
-
     const processImage = async (file: File | undefined, placeholder: string) => {
       if (!file) return
       input.placeholder = placeholder
-      try {
-        const query = await readCameraImage(file)
-        if (query) setSearchInput(input, query)
-        else alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.')
-      } catch { alert('Photo search failed. Dobara try karein.') }
+      try { const query = await readCameraImage(file); if (query) setSearchInput(input, query); else alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.') }
+      catch { alert('Photo search failed. Dobara try karein.') }
       finally { input.placeholder = 'Search by Keyword or Product ID' }
     }
-
     if (!cameraInput) {
-      cameraInput = document.createElement('input')
-      cameraInput.type = 'file'; cameraInput.accept = 'image/*'; cameraInput.setAttribute('capture', 'environment')
-      cameraInput.className = 'camera-capture-input'; cameraInput.style.display = 'none'
-      cameraInput.addEventListener('change', async () => {
-        const file = cameraInput?.files?.[0]
-        await processImage(file, 'Searching from camera photo...')
-        if (cameraInput) cameraInput.value = ''
-      })
+      cameraInput = document.createElement('input'); cameraInput.type = 'file'; cameraInput.accept = 'image/*'; cameraInput.setAttribute('capture', 'environment'); cameraInput.className = 'camera-capture-input'; cameraInput.style.display = 'none'
+      cameraInput.addEventListener('change', async () => { const file = cameraInput?.files?.[0]; await processImage(file, 'Searching from camera photo...'); if (cameraInput) cameraInput.value = '' })
       searchBox.appendChild(cameraInput)
     }
-
     if (!galleryInput) {
-      galleryInput = document.createElement('input')
-      galleryInput.type = 'file'; galleryInput.accept = 'image/*'
-      galleryInput.className = 'gallery-upload-input'; galleryInput.style.display = 'none'
-      galleryInput.addEventListener('change', async () => {
-        const file = galleryInput?.files?.[0]
-        await processImage(file, 'Searching from gallery photo...')
-        if (galleryInput) galleryInput.value = ''
-      })
+      galleryInput = document.createElement('input'); galleryInput.type = 'file'; galleryInput.accept = 'image/*'; galleryInput.className = 'gallery-upload-input'; galleryInput.style.display = 'none'
+      galleryInput.addEventListener('change', async () => { const file = galleryInput?.files?.[0]; await processImage(file, 'Searching from gallery photo...'); if (galleryInput) galleryInput.value = '' })
       searchBox.appendChild(galleryInput)
     }
-
-    const menu = document.createElement('div')
-    menu.className = 'camera-source-menu'
-    menu.setAttribute('role', 'menu')
+    const menu = document.createElement('div'); menu.className = 'camera-source-menu'; menu.setAttribute('role', 'menu')
     menu.innerHTML = '<button type="button" role="menuitem" data-source="camera"><span class="camera-source-icon">⌾</span><span><b>Camera</b><small>Take a photo</small></span></button><button type="button" role="menuitem" data-source="gallery"><span class="camera-source-icon">▧</span><span><b>Gallery</b><small>Choose a photo</small></span></button>'
     searchBox.appendChild(menu)
-
     const closeMenu = () => menu.classList.remove('open')
-    menu.querySelector('[data-source="camera"]')?.addEventListener('click', (event) => {
-      event.preventDefault(); event.stopPropagation(); closeMenu(); cameraInput?.click()
-    })
-    menu.querySelector('[data-source="gallery"]')?.addEventListener('click', (event) => {
-      event.preventDefault(); event.stopPropagation(); closeMenu(); galleryInput?.click()
-    })
-    camera.addEventListener('click', (event) => {
-      event.preventDefault(); event.stopPropagation(); menu.classList.toggle('open')
-    })
-    document.addEventListener('click', (event) => {
-      if (!searchBox.contains(event.target as Node)) closeMenu()
-    })
+    menu.querySelector('[data-source="camera"]')?.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); closeMenu(); cameraInput?.click() })
+    menu.querySelector('[data-source="gallery"]')?.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); closeMenu(); galleryInput?.click() })
+    camera.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); menu.classList.toggle('open') })
+    document.addEventListener('click', (event) => { if (!searchBox.contains(event.target as Node)) closeMenu() })
   }
 }
 
@@ -201,8 +172,7 @@ function setupReferenceHome() {
     const slides = [hero, hero.cloneNode(true) as HTMLElement, hero.cloneNode(true) as HTMLElement]
     const titles = [['Best Quality', 'Lowest Prices', 'Fashion  |  Home  |  Beauty  |  More'], ['Great Deals', 'Everyday Value', 'Fashion  |  Home  |  Beauty  |  More'], ['Apna Cart', 'Har Ghar Ki Zarurat', 'Shop smart  |  Save more  |  Easy shopping']]
     slides.forEach((slide, index) => {
-      slide.dataset.swipeReady = 'true'
-      const h1 = slide.querySelector('h1'); const p = slide.querySelector('p')
+      slide.dataset.swipeReady = 'true'; const h1 = slide.querySelector('h1'); const p = slide.querySelector('p')
       if (h1) h1.innerHTML = `${titles[index][0]}<br /><b>${titles[index][1]}</b>`
       if (p) p.textContent = titles[index][2]
       const button = slide.querySelector('button') as HTMLButtonElement | null
@@ -229,7 +199,5 @@ if (typeof window !== 'undefined') {
 }
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=19`, { updateViaCache: 'none' }).catch(() => undefined)
-  })
+  window.addEventListener('load', () => { navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=20`, { updateViaCache: 'none' }).catch(() => undefined) })
 }
