@@ -35,3 +35,5 @@
 
 @media (max-width:800px) { .hero-banner { min-height:175px; padding:23px 39% 22px 20px; } .hero-banner h1 { font-size:25px; } .hero-art { right:5%; width:125px; height:115px; font-size:60px; top:30px; } .product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:430px) { .hero-banner { min-height:155px; padding:19px 34% 18px 17px; border-radius:16px; } .hero-banner h1 { font-size:21px; } .hero-banner p { font-size:9px; } .hero-art { width:105px; height:92px; font-size:49px; right:3%; top:28px; } }
+
+/* Force Netlify Git-connected build to pick up the latest Home UI. */
