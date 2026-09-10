@@ -8,6 +8,10 @@
 .search-box { border-color:#bfe7d0; background:#f5fcf8; box-shadow:0 4px 14px rgba(7,125,76,.06); }
 .search-box span { color:#0a9560; }
 
+/* Hide the old CSS-generated banner completely. The real hero in AppFixed.tsx is kept. */
+.category-strip::before,
+.category-strip::after { display:none !important; content:none !important; }
+
 .hero-banner { position:relative; overflow:hidden; min-height:190px; border-radius:20px; margin:6px 0 16px; padding:26px 36% 25px 30px; background:linear-gradient(100deg,#e9fbdc 0%,#d4f4c6 42%,#b1e8b5 100%); box-shadow:0 8px 22px rgba(25,102,57,.08); }
 .hero-banner:after { content:''; position:absolute; width:280px; height:280px; right:-55px; top:-75px; border-radius:50%; background:rgba(255,255,255,.32); }
 .hero-banner > div:first-child { position:relative; z-index:2; }
@@ -36,4 +40,4 @@
 @media (max-width:800px) { .hero-banner { min-height:175px; padding:23px 39% 22px 20px; } .hero-banner h1 { font-size:25px; } .hero-art { right:5%; width:125px; height:115px; font-size:60px; top:30px; } .product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:430px) { .hero-banner { min-height:155px; padding:19px 34% 18px 17px; border-radius:16px; } .hero-banner h1 { font-size:21px; } .hero-banner p { font-size:9px; } .hero-art { width:105px; height:92px; font-size:49px; right:3%; top:28px; } }
 
-/* Force Netlify Git-connected build to pick up the latest Home UI. */
+/* Cache-busting marker: 2026-09-10-home-ui-v2 */
