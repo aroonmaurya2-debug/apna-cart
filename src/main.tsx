@@ -143,6 +143,40 @@ function setupSearchTools() {
     }
     camera.addEventListener('click', () => cameraInput?.click())
   }
+
+  // Add a + button immediately to the right of the camera icon for phone gallery upload.
+  if (!searchBox.querySelector('button[aria-label="Gallery upload"]')) {
+    const galleryButton = document.createElement('button')
+    galleryButton.type = 'button'
+    galleryButton.className = 'search-action gallery-upload'
+    galleryButton.setAttribute('aria-label', 'Gallery upload')
+    galleryButton.title = 'Upload photo from gallery'
+    galleryButton.textContent = '＋'
+
+    const galleryInput = document.createElement('input')
+    galleryInput.type = 'file'
+    galleryInput.accept = 'image/*'
+    galleryInput.className = 'gallery-upload-input'
+    galleryInput.style.display = 'none'
+    galleryInput.addEventListener('change', async () => {
+      const file = galleryInput.files?.[0]
+      if (!file) return
+      input.placeholder = 'Searching from gallery photo...'
+      try {
+        const query = await readCameraImage(file)
+        if (query) setSearchInput(input, query)
+        else alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.')
+      } catch { alert('Gallery photo search failed. Dobara try karein.') }
+      finally { input.placeholder = 'Search by Keyword or Product ID'; galleryInput.value = '' }
+    })
+    searchBox.insertBefore(galleryButton, searchBox.querySelector('button[aria-label="Camera search"], button[aria-label="Search with camera"]')?.nextSibling || null)
+    searchBox.appendChild(galleryInput)
+    galleryButton.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      galleryInput.click()
+    })
+  }
 }
 
 function setupReferenceHome() {
@@ -182,6 +216,6 @@ if (typeof window !== 'undefined') {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=18`, { updateViaCache: 'none' }).catch(() => undefined)
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=19`, { updateViaCache: 'none' }).catch(() => undefined)
   })
 }
