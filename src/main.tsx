@@ -36,6 +36,28 @@ function loadTesseract() {
   })
 }
 
+function productKeyword(text: string) {
+  const normalized = text.toLowerCase()
+  const aliases: Array<[RegExp, string]> = [
+    [/saree|sari|silk/, 'saree'],
+    [/kurti|kurta|ethnic/, 'kurti'],
+    [/dress|gown/, 'dress'],
+    [/shirt|t-?shirt/, 'shirt'],
+    [/top/, 'top'],
+    [/necklace|jewell?ery|earring/, 'necklace'],
+    [/watch/, 'watch'],
+    [/cookware|kitchen|pan|steel/, 'pan'],
+    [/kids?|child|children/, 'kids'],
+    [/plant|indoor/, 'plant'],
+    [/cushion|cover/, 'cushion'],
+    [/lipstick|makeup|cosmetic/, 'lipstick'],
+    [/shoe|sneaker|running/, 'shoes'],
+    [/headphone|earphone/, 'headphones'],
+    [/smartphone|mobile|phone/, 'smartphone'],
+  ]
+  return aliases.find(([pattern]) => pattern.test(normalized))?.[1] || text.trim().split(/\s+/).slice(0, 4).join(' ')
+}
+
 async function readCameraImage(file: File) {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -60,10 +82,10 @@ async function readCameraImage(file: File) {
     const Tesseract = await loadTesseract()
     const result = await Tesseract.recognize(dataUrl, 'eng')
     const text = String(result?.data?.text || '').replace(/\s+/g, ' ').trim()
-    if (text) return text.slice(0, 120)
+    if (text) return productKeyword(text)
   } catch { /* filename fallback */ }
 
-  return file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+  return productKeyword(file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim())
 }
 
 function setupSearchTools() {
@@ -196,6 +218,6 @@ if (typeof window !== 'undefined') {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=16`, { updateViaCache: 'none' }).catch(() => undefined)
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=17`, { updateViaCache: 'none' }).catch(() => undefined)
   })
 }
