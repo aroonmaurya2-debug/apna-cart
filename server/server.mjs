@@ -78,9 +78,24 @@ app.post('/api/auth/verify-otp', (request, response) => {
   otpStore.delete(cleanContact); const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, { name: record.name, contact: cleanContact, createdAt: Date.now() }); return response.json({ token, user: { name: record.name, contact: cleanContact } })
 })
 
-app.get('/api/products', async (_request, response) => {
+const inferGender = (product) => product.gender || (product.category === 'Men' || /\bmen'?s?\b/i.test(product.name) ? 'Men' : product.category === 'Kids' || /\bkids?\b/i.test(product.name) ? 'Kids' : product.category === 'All Categories' && /smartphone|headphones/i.test(product.name) ? 'Unisex' : 'Women')
+
+app.get('/api/products', async (request, response) => {
   if (!productsCollection) return response.json({ products: [] })
-  try { const snapshot = await productsCollection.where('status', '==', 'active').get(); return response.json({ products: snapshot.docs.map((doc) => doc.data()) }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Products could not be loaded.' }) }
+  try {
+    const snapshot = await productsCollection.where('status', '==', 'active').get()
+    const category = clean(request.query.category)
+    const gender = clean(request.query.gender)
+    const sort = clean(request.query.sort)
+    let products = snapshot.docs.map((doc) => ({ ...doc.data(), gender: inferGender(doc.data()) }))
+    if (category && category !== 'All') products = products.filter((product) => product.category === category)
+    if (gender && gender !== 'All') products = products.filter((product) => inferGender(product) === gender)
+    if (sort === 'price-low') products.sort((a, b) => Number(a.price) - Number(b.price))
+    else if (sort === 'price-high') products.sort((a, b) => Number(b.price) - Number(a.price))
+    else if (sort === 'rating') products.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+    else if (sort === 'discount') products.sort((a, b) => ((Number(b.oldPrice) - Number(b.price)) / Math.max(Number(b.oldPrice), 1)) - ((Number(a.oldPrice) - Number(a.price)) / Math.max(Number(a.oldPrice), 1)))
+    return response.json({ products })
+  } catch (error) { console.error(error); return response.status(500).json({ message: 'Products could not be loaded.' }) }
 })
 
 app.get('/api/sellers/me', async (request, response) => {
@@ -116,10 +131,10 @@ app.post('/api/products', async (request, response) => {
   const session = getSession(request); if (!session) return response.status(401).json({ message: 'Login required.' })
   if (!productsCollection || !sellersCollection) return response.status(503).json({ message: 'Firebase is not configured.' })
   const sellerSnapshot = await sellersCollection.where('email', '==', session.contact).limit(1).get(); if (sellerSnapshot.empty) return response.status(403).json({ message: 'Register as a seller first.' })
-  const { name, category, price, oldPrice, image, sizes, colors, description } = request.body || {}
+  const { name, category, gender, price, oldPrice, image, sizes, colors, description } = request.body || {}
   const numericPrice = Number(price); if (!name?.trim() || !category?.trim() || !Number.isFinite(numericPrice) || numericPrice <= 0) return response.status(400).json({ message: 'Product name, category and valid price are required.' })
   const id = `product-${crypto.randomUUID()}`
-  const product = { id, sellerId: sellerSnapshot.docs[0].id, sellerName: sellerSnapshot.docs[0].data().shopName || sellerSnapshot.docs[0].data().name, name: name.trim(), category: category.trim(), price: numericPrice, oldPrice: Number(oldPrice) > numericPrice ? Number(oldPrice) : numericPrice, image: String(image || '').trim(), sizes: Array.isArray(sizes) ? sizes.slice(0, 20) : [], colors: Array.isArray(colors) ? colors.slice(0, 20) : [], description: String(description || '').trim(), rating: 0, reviews: 0, status: 'active', createdAt: new Date().toISOString() }
+  const product = { id, sellerId: sellerSnapshot.docs[0].id, sellerName: sellerSnapshot.docs[0].data().shopName || sellerSnapshot.docs[0].data().name, name: name.trim(), category: category.trim(), gender: ['Women', 'Men', 'Kids', 'Unisex'].includes(gender) ? gender : 'Women', price: numericPrice, oldPrice: Number(oldPrice) > numericPrice ? Number(oldPrice) : numericPrice, image: String(image || '').trim(), sizes: Array.isArray(sizes) ? sizes.slice(0, 20) : [], colors: Array.isArray(colors) ? colors.slice(0, 20) : [], description: String(description || '').trim(), rating: 0, reviews: 0, status: 'active', createdAt: new Date().toISOString() }
   await productsCollection.doc(id).set(product); return response.status(201).json({ product })
 })
 
