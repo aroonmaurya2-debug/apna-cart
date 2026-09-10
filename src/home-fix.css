@@ -1,6 +1,14 @@
 .category-strip::before { display:none !important; content:none !important; }
 
-.hero-banner { position:relative; overflow:hidden; min-height:190px; border-radius:20px; margin:6px 0 16px; padding:26px 36% 25px 30px; background:linear-gradient(100deg,#effbd8 0%,#d9f6c8 42%,#b8edba 100%); box-shadow:0 8px 22px rgba(25,102,57,.08); }
+/* Apna Cart Home Page - green shopping UI only */
+.top-header { background:#ffffff; border-bottom:1px solid #e6f2eb; }
+.brand { color:#123b2a; }
+.brand b { color:#07985d; }
+.icon-button { background:#eef9f3; color:#08794d; }
+.search-box { border-color:#bfe7d0; background:#f5fcf8; box-shadow:0 4px 14px rgba(7,125,76,.06); }
+.search-box span { color:#0a9560; }
+
+.hero-banner { position:relative; overflow:hidden; min-height:190px; border-radius:20px; margin:6px 0 16px; padding:26px 36% 25px 30px; background:linear-gradient(100deg,#e9fbdc 0%,#d4f4c6 42%,#b1e8b5 100%); box-shadow:0 8px 22px rgba(25,102,57,.08); }
 .hero-banner:after { content:''; position:absolute; width:280px; height:280px; right:-55px; top:-75px; border-radius:50%; background:rgba(255,255,255,.32); }
 .hero-banner > div:first-child { position:relative; z-index:2; }
 .hero-banner span { font-size:10px; letter-spacing:1.2px; font-weight:800; color:#148151; }
@@ -11,5 +19,19 @@
 .hero-art { position:absolute; z-index:2; right:9%; top:25px; width:155px; height:140px; border-radius:32px; background:#087a49; color:#fff; display:grid; place-items:center; font-size:76px; transform:rotate(3deg); box-shadow:0 15px 25px rgba(8,122,73,.22); }
 .hero-dots { position:absolute; z-index:3; bottom:10px; left:50%; font-size:9px; letter-spacing:4px; color:#73ae79; }
 
-@media (max-width:800px) { .hero-banner { min-height:175px; padding:23px 39% 22px 20px; } .hero-banner h1 { font-size:25px; } .hero-art { right:5%; width:125px; height:115px; font-size:60px; top:30px; } }
+.category-strip { gap:14px; padding-bottom:16px; }
+.category-item { color:#164b35; }
+.category-icon { background:#e3f8ec; box-shadow:inset 0 0 0 1px #c8ead7; }
+.category-item.active .category-icon { background:linear-gradient(145deg,#07985d,#087a49); box-shadow:0 8px 18px rgba(11,165,104,.24); }
+.section-heading h2 { color:#123b2a; }
+.section-heading button { color:#087a49; }
+.product-card { border-color:#d8ece0; box-shadow:0 5px 16px rgba(18,82,52,.07); }
+.product-tag { background:#078f57; }
+.price-row strong { color:#123b2a; }
+.discount { color:#08794d; background:#d5f6e2; }
+.add-button, .primary-wide { background:linear-gradient(90deg,#078f57,#07985d); }
+.bottom-nav button.active { color:#07985d; }
+.bottom-nav button.active:after { background:#07985d; }
+
+@media (max-width:800px) { .hero-banner { min-height:175px; padding:23px 39% 22px 20px; } .hero-banner h1 { font-size:25px; } .hero-art { right:5%; width:125px; height:115px; font-size:60px; top:30px; } .product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:430px) { .hero-banner { min-height:155px; padding:19px 34% 18px 17px; border-radius:16px; } .hero-banner h1 { font-size:21px; } .hero-banner p { font-size:9px; } .hero-art { width:105px; height:92px; font-size:49px; right:3%; top:28px; } }
