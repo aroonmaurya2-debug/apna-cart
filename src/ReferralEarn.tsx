@@ -37,9 +37,24 @@ export default function ReferralEarn() {
   async function inviteWhatsApp() {
     if (!code) return setMessage('Pehle login karke referral link generate karein.')
     const t = token()
-    try { if (t) await fetch(`${API}/referrals/invite`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}` }, body: JSON.stringify({ code }) }) } catch { /* sharing can continue */ }
+    try {
+      if (t) await fetch(`${API}/referrals/invite`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}` }, body: JSON.stringify({ code }) })
+    } catch { /* sharing can continue */ }
+
     const text = `🛍️ Apna Cart join karo! Fashion, Home, Beauty aur Electronics ek hi app me. Mere referral link se app open karo: ${inviteLink}`
-    window.location.href = `https://wa.me/?text=${encodeURIComponent(text)}`
+    const encoded = encodeURIComponent(text)
+
+    // Android/iOS WhatsApp app chooser: opens WhatsApp's contact/chat selection with the message prefilled.
+    const appUrl = `whatsapp://send?text=${encoded}`
+    const webUrl = `https://api.whatsapp.com/send?text=${encoded}`
+    let opened = false
+    const onVisibility = () => { opened = true }
+    document.addEventListener('visibilitychange', onVisibility, { once: true })
+    window.location.href = appUrl
+    window.setTimeout(() => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      if (!opened) window.location.href = webUrl
+    }, 1200)
   }
 
   async function shareReferral() {
