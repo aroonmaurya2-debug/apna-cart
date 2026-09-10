@@ -1,5 +1,6 @@
-const CACHE_NAME = 'apna-cart-v6'
-const APP_SHELL = ['/', '/manifest.webmanifest', '/app-icon.svg?version=6']
+const CACHE_NAME = 'apna-cart-v7'
+const BASE = '/apna-cart/'
+const APP_SHELL = [BASE, `${BASE}manifest.webmanifest`, `${BASE}app-icon.svg?version=6`]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)))
@@ -20,6 +21,6 @@ self.addEventListener('fetch', (event) => {
       const copy = response.clone()
       caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
       return response
-    }).catch(() => caches.match('/'))),
+    }).catch(() => caches.match(BASE))),
   )
 })

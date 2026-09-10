@@ -1,10 +1,10 @@
 {
   "name": "Apna Cart",
   "short_name": "Apna Cart",
-  "id": "/",
+  "id": "/apna-cart/",
   "description": "Fashion, home, beauty, electronics aur grocery ek hi cart mein.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/apna-cart/",
+  "scope": "/apna-cart/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#f8f4e9",
@@ -15,25 +15,10 @@
   "prefer_related_applications": false,
   "orientation": "portrait-primary",
   "icons": [
-    {
-      "src": "/app-icon.svg?version=5",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "app-icon.svg?version=6", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ],
   "shortcuts": [
-    {
-      "name": "Shop products",
-      "short_name": "Shop",
-      "url": "/#shop",
-      "icons": [{ "src": "/app-icon.svg?version=5", "sizes": "any" }]
-    },
-    {
-      "name": "My orders",
-      "short_name": "Orders",
-      "url": "/#top?orders=true",
-      "icons": [{ "src": "/app-icon.svg?version=5", "sizes": "any" }]
-    }
+    { "name": "Shop products", "short_name": "Shop", "url": "/apna-cart/#shop", "icons": [{ "src": "app-icon.svg?version=6", "sizes": "any" }] },
+    { "name": "My orders", "short_name": "Orders", "url": "/apna-cart/#top?orders=true", "icons": [{ "src": "app-icon.svg?version=6", "sizes": "any" }] }
   ]
 }

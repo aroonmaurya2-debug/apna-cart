@@ -1,8 +1,9 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// https://vite.dev/config/
+// Apna Cart is deployed as a GitHub Pages project site at /apna-cart/.
 export default defineConfig({
+  base: '/apna-cart/',
   plugins: [react()],
   server: {
     proxy: {
