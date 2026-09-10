@@ -31,9 +31,10 @@ export default function App() {
   const [queryText, setQueryText] = useState('')
   const [category, setCategory] = useState('All')
   const [view, setView] = useState<'home' | 'cart' | 'checkout' | 'orders' | 'login'>('home')
-  const [phone, setPhone] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [email, setEmail] = useState('')
   const [payment, setPayment] = useState<PaymentMethod>('Cash on Delivery')
@@ -70,25 +71,27 @@ export default function App() {
   }
 
   async function requestOtp() {
-    const cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length < 10) return setMessage('Valid mobile number dijiye.')
+    const cleanEmail = loginEmail.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return setMessage('Valid email address dijiye.')
     if (!name.trim()) return setMessage('Name dijiye.')
     setLoading(true); setMessage('')
-    try { await api('/auth/request-otp', { method: 'POST', body: JSON.stringify({ name: name.trim(), contact: phone.startsWith('+') ? phone : `+91${cleanPhone}` }) }); setMessage('OTP bhej diya gaya. OTP enter karein.') }
-    catch (error) { setMessage(error instanceof Error ? error.message : 'OTP send nahi hua.') }
+    try {
+      await api('/auth/request-otp', { method: 'POST', body: JSON.stringify({ name: name.trim(), contact: cleanEmail }) })
+      setMessage('OTP aapke email par bhej diya gaya. Email check karein.')
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'OTP send nahi hua.') }
     setLoading(false)
   }
 
   async function verifyOtp() {
+    const cleanEmail = loginEmail.trim().toLowerCase()
     if (!otp.trim()) return setMessage('OTP enter karein.')
     setLoading(true); setMessage('')
     try {
-      const contact = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '')}`
-      const data = await api('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ contact, otp }) })
+      const data = await api('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ contact: cleanEmail, otp }) })
       if (!data.token) throw new Error('Login token nahi mila.')
       localStorage.setItem('apna-cart-token', data.token)
-      const loggedUser = data.user || { name: name.trim() || 'Apna Cart User', contact }
-      setUser(loggedUser); setPhone(loggedUser.contact); setView('home'); setMessage('Login successful!')
+      const loggedUser = data.user || { name: name.trim() || 'Apna Cart User', contact: cleanEmail }
+      setUser(loggedUser); setLoginEmail(loggedUser.contact); setView('home'); setMessage('Login successful!')
     } catch (error) { setMessage(error instanceof Error ? error.message : 'OTP verify nahi hua.') }
     setLoading(false)
   }
@@ -131,7 +134,7 @@ export default function App() {
 
       {view === 'cart' && <section className="page-card"><h2>🛒 Your Cart</h2>{cartItems.length === 0 ? <p>Cart empty hai.</p> : <>{cartItems.map(item => <div className="cart-line" key={item.id}><img src={item.image} alt="" /><div className="cart-detail"><b>{item.name}</b><span>{money(item.price)}</span><div className="qty"><button onClick={() => changeQty(item.id, -1)}>-</button><b>{item.quantity}</b><button onClick={() => changeQty(item.id, 1)}>+</button></div></div></div>)}<div className="cart-total"><span>Total</span><strong>{money(total)}</strong></div><button className="primary-wide" onClick={() => user ? setView('checkout') : setView('login')}>Proceed to Checkout</button></>}</section>}
 
-      {view === 'login' && <section className="form-card"><h2>Login / Register</h2><p className="muted">Apna Cart par shopping shuru karein.</p><input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" /><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Mobile number" /><button className="primary-wide" disabled={loading} onClick={requestOtp}>{loading ? 'Sending...' : 'Send OTP'}</button><input value={otp} onChange={e => setOtp(e.target.value)} placeholder="Enter OTP" /><button className="primary-wide" disabled={loading} onClick={verifyOtp}>{loading ? 'Verifying...' : 'Verify & Login'}</button><p className="muted small">OTP backend se send hoga; Firebase billing ki zarurat nahi hai.</p></section>}
+      {view === 'login' && <section className="form-card"><h2>Login / Register</h2><p className="muted">Apna Cart par shopping shuru karein.</p><input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" /><input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder="Email address" autoComplete="email" /><button className="primary-wide" disabled={loading} onClick={requestOtp}>{loading ? 'Sending...' : 'Send OTP'}</button><input inputMode="numeric" value={otp} onChange={e => setOtp(e.target.value)} placeholder="Enter OTP" maxLength={6} /><button className="primary-wide" disabled={loading} onClick={verifyOtp}>{loading ? 'Verifying...' : 'Verify & Login'}</button><p className="muted small">Free option: OTP email par aayega. Firebase SMS billing ki zarurat nahi hai.</p></section>}
 
       {view === 'checkout' && <section className="form-card"><h2>📦 Checkout</h2><textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="Full delivery address" rows={4} /><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Mobile number" /><input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" /><label>Payment method</label><select value={payment} onChange={e => setPayment(e.target.value as PaymentMethod)}>{(['UPI', 'Card', 'Net banking', 'Wallet', 'Cash on Delivery'] as PaymentMethod[]).map(x => <option key={x}>{x}</option>)}</select><div className="cart-total"><span>Total</span><strong>{money(total)}</strong></div><button className="primary-wide" disabled={loading} onClick={placeOrder}>{loading ? 'Placing...' : 'Place Order'}</button></section>}
 
