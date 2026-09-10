@@ -13,6 +13,59 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
+function setSearchInput(input: HTMLInputElement, text: string) {
+  const value = text.trim()
+  if (!value) return
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+  setter?.call(input, value)
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+  input.dispatchEvent(new Event('change', { bubbles: true }))
+  input.focus()
+}
+
+function loadTesseract() {
+  return new Promise<any>((resolve, reject) => {
+    const existing = (window as any).Tesseract
+    if (existing) return resolve(existing)
+    const script = document.createElement('script')
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'
+    script.async = true
+    script.onload = () => resolve((window as any).Tesseract)
+    script.onerror = () => reject(new Error('OCR library load failed'))
+    document.head.appendChild(script)
+  })
+}
+
+async function readCameraImage(file: File) {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error || new Error('Image read failed'))
+    reader.readAsDataURL(file)
+  })
+
+  if ('BarcodeDetector' in window) {
+    try {
+      const Detector = (window as any).BarcodeDetector
+      const detector = new Detector()
+      const image = new Image()
+      image.src = dataUrl
+      await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error('Image decode failed')) })
+      const barcodes = await detector.detect(image)
+      if (barcodes?.[0]?.rawValue) return barcodes[0].rawValue
+    } catch { /* OCR fallback */ }
+  }
+
+  try {
+    const Tesseract = await loadTesseract()
+    const result = await Tesseract.recognize(dataUrl, 'eng')
+    const text = String(result?.data?.text || '').replace(/\s+/g, ' ').trim()
+    if (text) return text.slice(0, 120)
+  } catch { /* filename fallback */ }
+
+  return file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+}
+
 function setupSearchTools() {
   const searchBox = document.querySelector('.search-box') as HTMLElement | null
   const input = searchBox?.querySelector('input') as HTMLInputElement | null
@@ -37,14 +90,13 @@ function setupSearchTools() {
       recognition.lang = 'hi-IN'
       recognition.interimResults = false
       recognition.maxAlternatives = 1
+      recognition.onstart = () => { input.placeholder = 'Listening...' }
       recognition.onresult = (event: any) => {
-        const text = event.results?.[0]?.[0]?.transcript || ''
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
-        setter?.call(input, text)
-        input.dispatchEvent(new Event('input', { bubbles: true }))
-        input.dispatchEvent(new Event('change', { bubbles: true }))
+        setSearchInput(input, event.results?.[0]?.[0]?.transcript || '')
+        input.placeholder = 'Search by Keyword or Product ID'
       }
-      recognition.onerror = () => undefined
+      recognition.onerror = () => { input.placeholder = 'Search by Keyword or Product ID' }
+      recognition.onend = () => { input.placeholder = 'Search by Keyword or Product ID' }
       recognition.start()
     })
   }
@@ -60,10 +112,24 @@ function setupSearchTools() {
       cameraInput.setAttribute('capture', 'environment')
       cameraInput.className = 'camera-capture-input'
       cameraInput.style.display = 'none'
-      cameraInput.addEventListener('change', () => {
-        if (cameraInput?.files?.length) {
-          const file = cameraInput.files[0]
-          input.placeholder = `Photo selected: ${file.name}`
+      cameraInput.addEventListener('change', async () => {
+        const file = cameraInput?.files?.[0]
+        if (!file) return
+        input.placeholder = 'Searching from photo...'
+        try {
+          const query = await readCameraImage(file)
+          if (query) {
+            setSearchInput(input, query)
+            input.placeholder = 'Search by Keyword or Product ID'
+          } else {
+            input.placeholder = 'Search by Keyword or Product ID'
+            alert('Product details image se read nahi ho paaye. Dobara clear photo try karein.')
+          }
+        } catch {
+          input.placeholder = 'Search by Keyword or Product ID'
+          alert('Photo search failed. Dobara try karein.')
+        } finally {
+          if (cameraInput) cameraInput.value = ''
         }
       })
       searchBox.appendChild(cameraInput)
@@ -130,6 +196,6 @@ if (typeof window !== 'undefined') {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=15`, { updateViaCache: 'none' }).catch(() => undefined)
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=16`, { updateViaCache: 'none' }).catch(() => undefined)
   })
 }
