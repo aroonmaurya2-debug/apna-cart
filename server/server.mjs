@@ -39,6 +39,7 @@ const sellersCollection = firestore?.collection('sellers')
 const productsCollection = firestore?.collection('products')
 const commissionsCollection = firestore?.collection('commissions')
 const referralsCollection = firestore?.collection('referrals')
+const referralAttributionsCollection = firestore?.collection('referralAttributions')
 void commissionsCollection
 
 const calculateCommission = (amount, rate = DEFAULT_COMMISSION_RATE) => { const commission = (amount * rate) / 100; return { commission: Math.round(commission * 100) / 100, sellerAmount: Math.round((amount - commission) * 100) / 100 } }
@@ -50,6 +51,7 @@ const getSession = (request) => sessions.get(request.headers.authorization?.repl
 const isOwner = (session) => Boolean(session && session.contact === ownerEmail.toLowerCase())
 const clean = (value) => String(value ?? '').trim()
 const makeReferralCode = (contact) => `APNA${crypto.createHash('sha256').update(contact).digest('hex').slice(0, 8).toUpperCase()}`
+const referralDocId = (contact) => clean(contact).replace(/[^a-zA-Z0-9_-]/g, '_')
 
 const readOrders = async () => {
   if (ordersCollection) { const snapshot = await ordersCollection.orderBy('createdAt', 'desc').get(); return snapshot.docs.map((document) => document.data()) }
@@ -86,8 +88,7 @@ app.get('/api/referrals/me', async (request, response) => {
   const code = makeReferralCode(session.contact)
   if (!referralsCollection) return response.json({ referral: { code, successfulInvites: 0, balance: 0, reward: REFERRAL_REWARD } })
   try {
-    const ref = referralsCollection.doc(session.contact.replace(/[^a-zA-Z0-9_-]/g, '_'))
-    const snap = await ref.get()
+    const ref = referralsCollection.doc(referralDocId(session.contact)); const snap = await ref.get()
     if (!snap.exists) { const referral = { contact: session.contact, name: session.name, code, successfulInvites: 0, inviteClicks: 0, balance: 0, reward: REFERRAL_REWARD, createdAt: new Date().toISOString() }; await ref.set(referral); return response.json({ referral }) }
     return response.json({ referral: { ...snap.data(), code } })
   } catch (error) { console.error(error); return response.status(500).json({ message: 'Referral data could not be loaded.' }) }
@@ -98,11 +99,27 @@ app.post('/api/referrals/invite', async (request, response) => {
   const code = clean(request.body?.code)
   if (!code || code !== makeReferralCode(session.contact)) return response.status(400).json({ message: 'Invalid referral code.' })
   if (!referralsCollection) return response.json({ ok: true })
+  try { const ref = referralsCollection.doc(referralDocId(session.contact)); await ref.set({ contact: session.contact, name: session.name, code, inviteClicks: 1, lastInviteAt: new Date().toISOString() }, { merge: true }); return response.json({ ok: true }) }
+  catch (error) { console.error(error); return response.status(500).json({ message: 'Invite could not be recorded.' }) }
+})
+
+app.post('/api/referrals/claim', async (request, response) => {
+  const session = getSession(request); if (!session) return response.status(401).json({ message: 'Please login first.' })
+  const code = clean(request.body?.code).toUpperCase()
+  if (!code) return response.status(400).json({ message: 'Referral code is required.' })
+  if (code === makeReferralCode(session.contact)) return response.status(400).json({ message: 'You cannot use your own referral code.' })
+  if (!referralsCollection || !referralAttributionsCollection) return response.json({ ok: true, tracked: false })
   try {
-    const ref = referralsCollection.doc(session.contact.replace(/[^a-zA-Z0-9_-]/g, '_'))
-    await ref.set({ contact: session.contact, name: session.name, code, inviteClicks: 1, lastInviteAt: new Date().toISOString() }, { merge: true })
-    return response.json({ ok: true })
-  } catch (error) { console.error(error); return response.status(500).json({ message: 'Invite could not be recorded.' }) }
+    const existing = await referralAttributionsCollection.doc(referralDocId(session.contact)).get()
+    if (existing.exists) return response.json({ ok: true, tracked: false, alreadyClaimed: true })
+    const referrerSnapshot = await referralsCollection.where('code', '==', code).limit(1).get()
+    if (referrerSnapshot.empty) return response.status(404).json({ message: 'Referral code not found.' })
+    const referrer = referrerSnapshot.docs[0].data()
+    const attribution = { referredContact: session.contact, referredName: session.name, referrerContact: referrer.contact, referrerCode: code, reward: REFERRAL_REWARD, status: 'pending', claimedAt: new Date().toISOString(), rewardedAt: null }
+    await referralAttributionsCollection.doc(referralDocId(session.contact)).set(attribution)
+    await referralsCollection.doc(referrerSnapshot.docs[0].id).set({ pendingInvites: Number(referrer.pendingInvites || 0) + 1 }, { merge: true })
+    return response.json({ ok: true, tracked: true, status: 'pending' })
+  } catch (error) { console.error(error); return response.status(500).json({ message: 'Referral could not be claimed.' }) }
 })
 
 const inferGender = (product) => product.gender || (product.category === 'Men' || /\bmen'?s?\b/i.test(product.name) ? 'Men' : product.category === 'Kids' || /\bkids?\b/i.test(product.name) ? 'Kids' : product.category === 'All Categories' && /smartphone|headphones/i.test(product.name) ? 'Unisex' : 'Women')
@@ -160,10 +177,27 @@ app.post('/api/orders', async (request, response) => {
   try { if (ordersCollection) await ordersCollection.doc(String(order.id)).set(order); else { const orders = await readOrders(); orders.unshift(order); await writeOrders(orders) }; const itemLines = items.map((item) => `${item.name} x ${item.quantity} - ₹${item.price * item.quantity}`).join('\n'); const ownerMessage = `New Apna Cart order #${order.id}\n\nCustomer: ${session.name}\nContact: ${session.contact}\nPhone: ${phone}\nEmail: ${email || 'Not provided'}\nAddress: ${address}\nPayment: ${order.paymentMethod}\nTotal: ₹${order.total}\n\nItems:\n${itemLines}`; try { await sendEmail(ownerEmail, `New order #${order.id} - Apna Cart`, ownerMessage) } catch (error) { console.error('Owner email failed:', error) }; return response.status(201).json({ order }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Order could not be saved.' }) }
 })
 
+async function rewardReferralForDeliveredOrder(order) {
+  if (!referralsCollection || !referralAttributionsCollection || !order?.customer?.contact) return
+  try {
+    const attributionRef = referralAttributionsCollection.doc(referralDocId(order.customer.contact))
+    const attributionSnap = await attributionRef.get()
+    if (!attributionSnap.exists) return
+    const attribution = attributionSnap.data()
+    if (attribution.status === 'rewarded' || !attribution.referrerContact) return
+    const referrerRef = referralsCollection.doc(referralDocId(attribution.referrerContact))
+    const referrerSnap = await referrerRef.get()
+    if (!referrerSnap.exists) return
+    const referrer = referrerSnap.data()
+    await referrerRef.set({ successfulInvites: Number(referrer.successfulInvites || 0) + 1, balance: Number(referrer.balance || 0) + REFERRAL_REWARD, pendingInvites: Math.max(0, Number(referrer.pendingInvites || 0) - 1), lastRewardAt: new Date().toISOString() }, { merge: true })
+    await attributionRef.set({ status: 'rewarded', rewardedAt: new Date().toISOString(), rewardedOrderId: String(order.id), reward: REFERRAL_REWARD }, { merge: true })
+  } catch (error) { console.error('Referral reward failed:', error) }
+}
+
 app.patch('/api/orders/:id/status', async (request, response) => {
   const session = getSession(request); if (!session || !isOwner(session)) return response.status(403).json({ message: 'Only the store owner can update order status.' })
   const nextStatus = String(request.body?.status || '').trim(); const nextLocation = String(request.body?.location || '').trim(); const allowedStatuses = new Set(['Processing', 'Accepted', 'Shipped', 'Delivered']); if (!allowedStatuses.has(nextStatus) || !nextLocation) return response.status(400).json({ message: 'Valid status and location are required.' })
-  try { if (ordersCollection) { const reference = ordersCollection.doc(request.params.id); const snapshot = await reference.get(); if (!snapshot.exists) return response.status(404).json({ message: 'Order not found.' }); const order = snapshot.data(); await reference.update({ status: nextStatus, location: nextLocation }); return response.json({ order: { id: snapshot.id, ...order, status: nextStatus, location: nextLocation } }) } const orders = await readOrders(); const order = orders.find((item) => String(item.id) === request.params.id); if (!order) return response.status(404).json({ message: 'Order not found.' }); order.status = nextStatus; order.location = nextLocation; await writeOrders(orders); return response.json({ order }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Order status could not be updated.' }) }
+  try { if (ordersCollection) { const reference = ordersCollection.doc(request.params.id); const snapshot = await reference.get(); if (!snapshot.exists) return response.status(404).json({ message: 'Order not found.' }); const order = snapshot.data(); await reference.update({ status: nextStatus, location: nextLocation }); if (nextStatus === 'Delivered' && order.status !== 'Delivered') await rewardReferralForDeliveredOrder({ ...order, status: nextStatus }); return response.json({ order: { id: snapshot.id, ...order, status: nextStatus, location: nextLocation } }) } const orders = await readOrders(); const order = orders.find((item) => String(item.id) === request.params.id); if (!order) return response.status(404).json({ message: 'Order not found.' }); const previousStatus = order.status; order.status = nextStatus; order.location = nextLocation; await writeOrders(orders); if (nextStatus === 'Delivered' && previousStatus !== 'Delivered') await rewardReferralForDeliveredOrder(order); return response.json({ order }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Order status could not be updated.' }) }
 })
 
 export { app }
