@@ -60,27 +60,77 @@ const readOrders = async () => {
 const writeOrders = async (orders) => { await fs.mkdir(dataDirectory, { recursive: true }); await fs.writeFile(ordersFile, JSON.stringify(orders, null, 2)) }
 const getTransporter = () => { if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null; return nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), secure: process.env.SMTP_SECURE === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } }) }
 const sendEmail = async (to, subject, text) => { const transporter = getTransporter(); if (!transporter) { console.log(`[email not configured] ${to}\n${subject}\n${text}`); return false }; await transporter.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text }); return true }
-const sendSms = async (phone, message) => {
-  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_FROM) return false
-  const body = new URLSearchParams({ To: phone, From: process.env.TWILIO_FROM, Body: message })
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`, { method: 'POST', headers: { Authorization: `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body })
-  if (!response.ok) throw new Error(`Twilio request failed: ${response.status}`)
-  return true
+
+const sendSmsVerify = async (phone) => {
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_VERIFY_SERVICE_SID) return false
+  const body = new URLSearchParams({ To: phone, Channel: 'sms' })
+  const response = await fetch(`https://verify.twilio.com/v2/Services/${process.env.TWILIO_VERIFY_SERVICE_SID}/Verifications`, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload?.message || `Twilio Verify request failed: ${response.status}`)
+  return payload?.status === 'pending'
+}
+
+const verifySmsOtp = async (phone, code) => {
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_VERIFY_SERVICE_SID) return false
+  const body = new URLSearchParams({ To: phone, Code: code })
+  const response = await fetch(`https://verify.twilio.com/v2/Services/${process.env.TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`, {
+    method: 'POST',
+    headers: { Authorization: `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload?.message || `Twilio Verify check failed: ${response.status}`)
+  return payload?.status === 'approved' && payload?.valid === true
 }
 
 app.get('/api/health', (_request, response) => response.json({ ok: true, service: 'apna-cart-api' }))
 app.post('/api/auth/request-otp', async (request, response) => {
   const { name, contact } = request.body || {}
   if (!name?.trim() || !contact?.trim()) return response.status(400).json({ message: 'Name and mobile number or email are required.' })
-  const cleanContact = normaliseContact(contact); const otp = String(crypto.randomInt(100000, 1000000))
-  otpStore.set(cleanContact, { name: name.trim(), otp, expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0 })
-  try { const message = `Your Apna Cart verification code is ${otp}. It expires in 5 minutes.`; const delivered = isEmail(cleanContact) ? await sendEmail(cleanContact, 'Your Apna Cart OTP', message) : await sendSms(cleanContact, message); if (!delivered && process.env.NODE_ENV === 'production') return response.status(503).json({ message: 'OTP provider is not configured. Add SMTP or Twilio credentials.' }); if (!delivered) console.log(`[development OTP] ${cleanContact}: ${otp}`); return response.json({ message: `OTP sent to ${contact}.` }) } catch (error) { console.error(error); return response.status(502).json({ message: 'OTP could not be sent. Check your provider settings.' }) }
+  const cleanContact = normaliseContact(contact)
+  const isPhone = !isEmail(cleanContact)
+  try {
+    if (isPhone) {
+      const delivered = await sendSmsVerify(cleanContact)
+      if (!delivered) return response.status(503).json({ message: 'Mobile OTP provider is not configured. Add TWILIO_VERIFY_SERVICE_SID in Render.' })
+      otpStore.set(cleanContact, { name: name.trim(), expiresAt: Date.now() + 10 * 60 * 1000, attempts: 0, provider: 'twilio-verify' })
+    } else {
+      const otp = String(crypto.randomInt(100000, 1000000))
+      otpStore.set(cleanContact, { name: name.trim(), otp, expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0, provider: 'email' })
+      const delivered = await sendEmail(cleanContact, 'Your Apna Cart OTP', `Your Apna Cart verification code is ${otp}. It expires in 5 minutes.`)
+      if (!delivered && process.env.NODE_ENV === 'production') return response.status(503).json({ message: 'Email OTP provider is not configured. Add SMTP credentials.' })
+      if (!delivered) console.log(`[development OTP] ${cleanContact}: ${otp}`)
+    }
+    return response.json({ message: `OTP sent to ${contact}.` })
+  } catch (error) {
+    console.error('OTP request failed:', error)
+    return response.status(502).json({ message: error?.message || 'OTP could not be sent. Check your provider settings.' })
+  }
 })
-app.post('/api/auth/verify-otp', (request, response) => {
-  const { contact, otp } = request.body || {}; const cleanContact = normaliseContact(contact || ''); const record = otpStore.get(cleanContact)
+
+app.post('/api/auth/verify-otp', async (request, response) => {
+  const { contact, otp } = request.body || {}
+  const cleanContact = normaliseContact(contact || '')
+  const record = otpStore.get(cleanContact)
   if (!record || Date.now() > record.expiresAt || record.attempts >= 5) return response.status(400).json({ message: 'OTP expired. Please request a new one.' })
-  record.attempts += 1; if (record.otp !== String(otp || '').trim()) return response.status(400).json({ message: 'Incorrect OTP.' })
-  otpStore.delete(cleanContact); const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, { name: record.name, contact: cleanContact, createdAt: Date.now() }); return response.json({ token, user: { name: record.name, contact: cleanContact } })
+  record.attempts += 1
+  try {
+    const valid = record.provider === 'twilio-verify'
+      ? await verifySmsOtp(cleanContact, String(otp || '').trim())
+      : record.otp === String(otp || '').trim()
+    if (!valid) return response.status(400).json({ message: 'Incorrect OTP.' })
+    otpStore.delete(cleanContact)
+    const token = crypto.randomBytes(32).toString('hex')
+    sessions.set(token, { name: record.name, contact: cleanContact, createdAt: Date.now() })
+    return response.json({ token, user: { name: record.name, contact: cleanContact } })
+  } catch (error) {
+    console.error('OTP verification failed:', error)
+    return response.status(502).json({ message: error?.message || 'OTP verification failed. Please try again.' })
+  }
 })
 
 app.get('/api/referrals/me', async (request, response) => {
