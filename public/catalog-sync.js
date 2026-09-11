@@ -4,6 +4,32 @@
   let syncing = false
   const money = n => `₹${Number(n || 0).toLocaleString('en-IN')}`
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+
+  function wishlist() {
+    try { return JSON.parse(localStorage.getItem('apna-cart-wishlist') || '[]').map(Number) } catch (_) { return [] }
+  }
+  function saveWishlist(ids) { localStorage.setItem('apna-cart-wishlist', JSON.stringify([...new Set(ids.map(Number))])) }
+  function refreshWishlistButtons() {
+    const ids = wishlist()
+    document.querySelectorAll('.heart').forEach(btn => {
+      const card = btn.closest('.product-card')
+      const id = Number(card?.dataset.backendProduct || card?.dataset.productId || 0)
+      if (!id) return
+      const active = ids.includes(id)
+      btn.classList.toggle('wishlisted', active)
+      btn.textContent = active ? '♥' : '♡'
+      btn.setAttribute('aria-pressed', String(active))
+    })
+  }
+  function toggleWishlist(btn) {
+    const card = btn.closest('.product-card')
+    const id = Number(card?.dataset.backendProduct || card?.dataset.productId || 0)
+    if (!id) return
+    const ids = wishlist()
+    const next = ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]
+    saveWishlist(next)
+    refreshWishlistButtons()
+  }
   const genderOf = p => p.gender || (p.category === 'Men' || /\bmen'?s?\b/i.test(p.name) ? 'Men' : p.category === 'Kids' || /\bkids?\b/i.test(p.name) ? 'Kids' : 'Unisex')
 
   async function sync() {
@@ -39,6 +65,7 @@
         btn.textContent = '✓ Added to Cart'
         setTimeout(() => { btn.textContent = '🛒 Add to Cart' }, 900)
       }))
+      refreshWishlistButtons()
     } catch (_) {
       syncing = false
       /* Keep the existing frontend catalog if backend is unavailable. */
@@ -55,7 +82,9 @@
     observer.observe(document.body, { childList: true, subtree: true })
     document.addEventListener('change', e => { if (e.target.closest?.('.filter-row')) { clearTimeout(timer); timer = setTimeout(sync, 80) } })
     document.addEventListener('input', e => { if (e.target.closest?.('.search-box')) { clearTimeout(timer); timer = setTimeout(sync, 350) } })
+    document.addEventListener('click', e => { const heart = e.target.closest?.('.heart'); if (heart) { e.preventDefault(); e.stopPropagation(); toggleWishlist(heart) } })
     sync()
+    refreshWishlistButtons()
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot()
 })()
