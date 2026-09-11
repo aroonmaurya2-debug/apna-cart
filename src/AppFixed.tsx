@@ -6,7 +6,7 @@ type User = { name: string; contact: string }
 type Order = { id: string | number; items: Array<Product & { quantity: number }>; total: number; status: string; location: string; phone: string; email: string; address?: string }
 type PaymentMethod = 'UPI' | 'Card' | 'Net banking' | 'Wallet' | 'Cash on Delivery'
 
-const API_BASE = import.meta.env.DEV ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
+const API_BASE = import.meta.env.DEV ? 'http://localhost:10000/api' : 'https://cart-2rcq.onrender.com/api'
 
 const products: Product[] = [
   { id: 1, name: 'Festive Kurti Set', category: '8PM Offer', gender: 'Women', price: 399, oldPrice: 799, image: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=800&q=85', rating: 4.5, reviews: 120, discount: '50% OFF', description: 'Soft and comfortable ethnic kurti set for festive and everyday wear.' },
