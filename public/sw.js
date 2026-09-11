@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apna-cart-v11'
+const CACHE_NAME = 'apna-cart-v22'
 const BASE = new URL('./', self.location).pathname
 const APP_SHELL = [
   BASE,
