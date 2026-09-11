@@ -29,6 +29,13 @@ export default function MarketplaceFeatures() {
 
   useEffect(() => { if (open) void loadProducts() }, [open])
   useEffect(() => localStorage.setItem('apna-cart-wishlist', JSON.stringify(wishlist)), [wishlist])
+  useEffect(() => {
+    const syncWishlist = () => {
+      try { setWishlist(JSON.parse(localStorage.getItem('apna-cart-wishlist') || '[]')) } catch (_) { setWishlist([]) }
+    }
+    window.addEventListener('apna-cart-wishlist-changed', syncWishlist)
+    return () => window.removeEventListener('apna-cart-wishlist-changed', syncWishlist)
+  }, [])
   const wished = useMemo(() => products.filter(p => wishlist.includes(p.id)), [products, wishlist])
 
   async function loadProducts() { try { const data = await api('/products'); setProducts(data.products || []) } catch { setProducts([]) } }
