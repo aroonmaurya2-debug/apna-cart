@@ -1,7 +1,7 @@
 (() => {
   const API = 'https://apna-cart-2rcq.onrender.com/api'
   const FIREBASE_CONFIG = {
-    apiKey: 'AIzaSyDCMQD18qjREFokYPS-3QabJGUoVc8pPeM',
+    apiKey: 'AIzaSyDCMQD18qjREFokYPS-3QabJGUoVc8pPe8M',
     authDomain: 'apna-cart-c60f4.firebaseapp.com',
     projectId: 'apna-cart-c60f4',
     storageBucket: 'apna-cart-c60f4.firebasestorage.app',
@@ -31,8 +31,6 @@
       if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG)
       auth = window.firebase.auth()
       try { auth.languageCode = 'en' } catch {}
-      const redirectResult = await auth.getRedirectResult()
-      if (redirectResult?.user) await finishFirebaseLogin(redirectResult.user)
     } catch (error) {
       console.warn('Firebase auth init:', error)
     } finally {
@@ -103,8 +101,12 @@
       if (!auth) return setMessage('Google login load nahi hua. Internet connection check karein.')
       try {
         const provider = new window.firebase.auth.GoogleAuthProvider()
-        if (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) await auth.signInWithRedirect(provider)
-        else await auth.signInWithPopup(provider)
+        // Mobile redirect was causing Firebase's "missing initial state" sessionStorage error.
+        // Use popup for all devices so the OAuth state stays in the current browser session.
+        await auth.signInWithPopup(provider)
+        const firebaseUser = auth.currentUser
+        if (!firebaseUser) throw new Error('Google account select nahi hua.')
+        await finishFirebaseLogin(firebaseUser)
       } catch (error) { setMessage(error?.message || 'Google login nahi hua.') }
     })
 
@@ -113,9 +115,9 @@
       let contact = contactInput.value.trim()
       if (!fullName) return setMessage('Full name dijiye.')
       if (mode === 'email') {
-        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(contact)) return setMessage('Valid email address dijiye.')
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) return setMessage('Valid email address dijiye.')
       } else {
-        const digits = contact.replace(/\\D/g, '')
+        const digits = contact.replace(/\D/g, '')
         if (digits.length !== 10) return setMessage('10-digit mobile number dijiye.')
         contact = `+91${digits}`
         contactInput.value = contact
@@ -132,7 +134,7 @@
     verifyButton.addEventListener('click', async () => {
       if (!otpSent) return
       const contact = contactInput.value.trim(); const otp = otpInput.value.trim()
-      if (!/^\\d{6}$/.test(otp)) return setMessage('6-digit OTP enter karein.')
+      if (!/^\d{6}$/.test(otp)) return setMessage('6-digit OTP enter karein.')
       verifyButton.disabled = true; verifyButton.textContent = 'Verifying...'
       try {
         const response = await fetch(`${API}/auth/verify-otp`, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ contact, otp }) })
