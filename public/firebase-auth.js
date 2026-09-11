@@ -59,12 +59,48 @@
     document.head.appendChild(s)
   }
 
+  async function finishFirebaseLogin(firebaseUser, endpoint = 'firebase-google') {
+    const idToken = await firebaseUser.getIdToken(true)
+    const r = await fetch(`${API}/auth/${endpoint}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken }) })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d.message || 'Firebase login verify nahi hua.')
+    completeLocalLogin(d)
+  }
+
+  function completeLocalLogin(d) {
+    if (d.token) localStorage.setItem('apna-cart-token', d.token)
+    if (d.user) localStorage.setItem('apna-cart-user', JSON.stringify(d.user))
+    localStorage.setItem('apna-cart-open-account', '1')
+    localStorage.removeItem('apna-cart-login-in-progress')
+    document.getElementById('apna-firebase-login')?.remove()
+    window.dispatchEvent(new Event('storage'))
+    location.reload()
+  }
+
+  async function completeEmailLinkIfPresent() {
+    if (!/mode=signIn|oobCode=/.test(location.href)) return
+    try {
+      await initFirebase()
+      await firebaseReady
+      if (!auth || !auth.isSignInWithEmailLink(location.href)) return
+      const email = localStorage.getItem('apna-cart-email-link') || window.prompt('Apna email address confirm karein:')
+      if (!email) return
+      const result = await auth.signInWithEmailLink(email.trim(), location.href)
+      localStorage.removeItem('apna-cart-email-link')
+      await finishFirebaseLogin(result.user, 'firebase-email')
+      history.replaceState({}, document.title, location.origin + location.pathname)
+    } catch (e) {
+      console.warn('Firebase email-link login:', e)
+      alert(e?.message || 'Email login link verify nahi hua.')
+    }
+  }
+
   function showLogin() {
     addStyles()
     document.getElementById('apna-firebase-login')?.remove()
     const root = document.createElement('div')
     root.id = 'apna-firebase-login'
-    root.innerHTML = `<div class="sheet"><div class="head"><h2>Login / Register</h2><button class="close" type="button">×</button></div><p style="color:#60736b;margin:0 0 12px">Apna Cart par login karke shopping, orders aur Refer & Earn use karein.</p><button class="google" type="button"><b>G</b> Continue with Google</button><div class="or">OR</div><div class="tabs"><button class="active" data-mode="email" type="button">Email OTP</button><button data-mode="phone" type="button">Mobile OTP</button></div><input class="name" placeholder="Full name"><input class="contact" placeholder="Email address"><button class="primary send" type="button">Send OTP</button><input class="otp" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" style="display:none"><button class="secondary verify" type="button" style="display:none">Verify & Login</button><div class="msg" style="display:none"></div></div>`
+    root.innerHTML = `<div class="sheet"><div class="head"><h2>Login / Register</h2><button class="close" type="button">×</button></div><p style="color:#60736b;margin:0 0 12px">Apna Cart par login karke shopping, orders aur Refer & Earn use karein.</p><button class="google" type="button"><b>G</b> Continue with Google</button><div class="or">OR</div><div class="tabs"><button class="active" data-mode="email" type="button">Email Login</button><button data-mode="phone" type="button">Mobile OTP</button></div><input class="name" placeholder="Full name"><input class="contact" placeholder="Email address"><button class="primary send" type="button">Send Login Link</button><input class="otp" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" style="display:none"><button class="secondary verify" type="button" style="display:none">Verify & Login</button><div class="msg" style="display:none"></div></div>`
     document.body.appendChild(root)
 
     root.querySelector('.close').onclick = () => root.remove()
@@ -89,7 +125,7 @@
         verify.style.display = 'none'
         send.style.display = 'block'
         send.disabled = false
-        send.textContent = 'Send OTP'
+        send.textContent = mode === 'email' ? 'Send Login Link' : 'Send OTP'
         root.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x === button))
         contact.value = ''
         contact.type = mode === 'email' ? 'email' : 'tel'
@@ -112,7 +148,7 @@
         const result = await auth.signInWithPopup(provider)
         const fu = result?.user || auth.currentUser
         if (!fu) throw new Error('Google account select nahi hua.')
-        await finishFirebaseLogin(fu)
+        await finishFirebaseLogin(fu, 'firebase-google')
       } catch (e) {
         setMsg(e?.message || 'Google login nahi hua.')
         button.disabled = false
@@ -124,29 +160,46 @@
       e.preventDefault(); e.stopPropagation()
       const n = name.value.trim()
       let c = contact.value.trim()
-      if (!n) return setMsg('Full name dijiye.')
+      if (!c) return setMsg(mode === 'email' ? 'Email address dijiye.' : 'Mobile number dijiye.')
       if (mode === 'email') {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)) return setMsg('Valid email address dijiye.')
-      } else {
-        const d = c.replace(/\D/g, '')
-        if (d.length !== 10) return setMsg('10-digit mobile number dijiye.')
-        c = '+91' + d
-        contact.value = c
+        send.disabled = true
+        send.textContent = 'Sending...'
+        try {
+          await initFirebase()
+          await firebaseReady
+          if (!auth) throw new Error(firebaseInitError || 'Firebase email login load nahi hua.')
+          const actionCodeSettings = { url: `${location.origin}${location.pathname}`, handleCodeInApp: true }
+          await auth.sendSignInLinkToEmail(c, actionCodeSettings)
+          localStorage.setItem('apna-cart-email-link', c)
+          setMsg('Login link email par bhej diya. Email open karke link par tap karein.')
+          send.textContent = 'Link Sent'
+        } catch (e) {
+          setMsg(e?.message || 'Email login link nahi bheja gaya. Firebase Email provider check karein.')
+          send.disabled = false
+          send.textContent = 'Send Login Link'
+        }
+        return
       }
+
+      const d = c.replace(/\D/g, '')
+      if (d.length !== 10) return setMsg('10-digit mobile number dijiye.')
+      c = '+91' + d
+      contact.value = c
       send.disabled = true
       send.textContent = 'Sending...'
-      setMsg('OTP bhejne ki koshish ho rahi hai...')
+      setMsg('Mobile OTP bhejne ki koshish ho rahi hai...')
       try {
-        const r = await fetch(`${API}/auth/request-otp`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: n, contact: c }) })
+        const r = await fetch(`${API}/auth/request-otp`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: n || 'Apna Cart User', contact: c }) })
         const d = await r.json().catch(() => ({}))
         if (!r.ok) throw new Error(d.message || `OTP send nahi hua (${r.status}).`)
         otpSent = true
         otp.style.display = 'block'
         verify.style.display = 'block'
         send.style.display = 'none'
-        setMsg(`OTP ${mode === 'email' ? 'email' : 'mobile'} par bhej diya gaya.`)
+        setMsg('OTP mobile par bhej diya gaya.')
       } catch (e) {
-        setMsg(e?.message || 'OTP send nahi hua. Server check karein.')
+        setMsg(e?.message || 'OTP send nahi hua. Provider settings check karein.')
         send.disabled = false
         send.textContent = 'Send OTP'
       }
@@ -173,24 +226,6 @@
     }
   }
 
-  async function finishFirebaseLogin(firebaseUser) {
-    const idToken = await firebaseUser.getIdToken(true)
-    const r = await fetch(`${API}/auth/firebase-google`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken }) })
-    const d = await r.json().catch(() => ({}))
-    if (!r.ok) throw new Error(d.message || 'Google login verify nahi hua.')
-    completeLocalLogin(d)
-  }
-
-  function completeLocalLogin(d) {
-    if (d.token) localStorage.setItem('apna-cart-token', d.token)
-    if (d.user) localStorage.setItem('apna-cart-user', JSON.stringify(d.user))
-    localStorage.setItem('apna-cart-open-account', '1')
-    localStorage.removeItem('apna-cart-login-in-progress')
-    document.getElementById('apna-firebase-login')?.remove()
-    window.dispatchEvent(new Event('storage'))
-    location.reload()
-  }
-
   function isLogin(el) {
     if (!el) return false
     const t = `${el.textContent || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`.toLowerCase().trim()
@@ -205,4 +240,5 @@
 
   window.addEventListener('apna-cart-open-login', showLogin)
   addStyles()
+  completeEmailLinkIfPresent()
 })()
