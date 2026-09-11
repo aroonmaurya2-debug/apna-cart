@@ -8,7 +8,11 @@
   function wishlist() {
     try { return JSON.parse(localStorage.getItem('apna-cart-wishlist') || '[]').map(Number) } catch (_) { return [] }
   }
-  function saveWishlist(ids) { localStorage.setItem('apna-cart-wishlist', JSON.stringify([...new Set(ids.map(Number))])) }
+  function saveWishlist(ids) {
+    const next = [...new Set(ids.map(Number))]
+    localStorage.setItem('apna-cart-wishlist', JSON.stringify(next))
+    window.dispatchEvent(new CustomEvent('apna-cart-wishlist-changed', { detail: next }))
+  }
   function refreshWishlistButtons() {
     const ids = wishlist()
     document.querySelectorAll('.heart').forEach(btn => {
