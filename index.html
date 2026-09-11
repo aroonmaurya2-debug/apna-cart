@@ -21,7 +21,7 @@
     <script src="./profile-photo.js?v=1"></script>
     <script src="./login-access.js?v=1"></script>
     <script src="./login-fix.js?v=2"></script>
-    <script src="./account-page.js?v=3"></script>
+    <script src="./account-page.js?v=4"></script>
     <script src="./firebase-auth.js?v=2"></script>
     <script>
       (() => {
@@ -35,8 +35,7 @@
           const target = event.target
           const button = target && typeof target.closest === 'function' ? target.closest('.whatsapp-btn') : null
           if (!button || localStorage.getItem('apna-cart-token')) return
-          event.preventDefault(); event.stopPropagation()
-          localStorage.setItem(pendingKey, '1'); closeReferral()
+          event.preventDefault(); event.stopPropagation(); localStorage.setItem(pendingKey, '1'); closeReferral()
           setTimeout(() => { const login = findLogin(); if (login) login.click(); else window.dispatchEvent(new CustomEvent('apna-cart-open-login')) }, 150)
         }, true)
         const timer = setInterval(() => {
