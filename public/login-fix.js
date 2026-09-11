@@ -1,71 +1,11 @@
 (() => {
   const API = 'https://apna-cart-2rcq.onrender.com/api'
-  const CONFIG = {
-    apiKey: 'AIzaSyDCMQD18qjREFokYPS-3QabJGUoVc8pPeM',
-    authDomain: 'apna-cart-c60f4.firebaseapp.com',
-    projectId: 'apna-cart-c60f4',
-    storageBucket: 'apna-cart-c60f4.firebasestorage.app',
-    messagingSenderId: '1032583871110',
-    appId: '1:1032583871110:web:b2293cc1592cbd80aeaf07'
-  }
-  let busy = false
-
-  const css = () => {
-    if (document.getElementById('apna-login-fix-css')) return
-    const s = document.createElement('style')
-    s.id = 'apna-login-fix-css'
-    s.textContent = `
-      #apna-login-fix{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.52);display:flex;align-items:flex-end;justify-content:center}
-      #apna-login-fix .box{width:min(100%,520px);max-height:90vh;overflow:auto;background:#fff;border-radius:26px 26px 0 0;padding:22px 20px 28px;font-family:Arial,sans-serif;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
-      #apna-login-fix h2{margin:0;color:#075d3e;font-size:24px}.lf-close{float:right;border:0;background:#eef6f2;color:#075d3e;border-radius:50%;width:38px;height:38px;font-size:22px}
-      .lf-google,.lf-primary,.lf-verify{width:100%;min-height:48px;border-radius:11px;font-weight:800;font-size:15px}.lf-google{border:1px solid #ddd;background:#fff;color:#202124;margin-top:14px}.lf-google b{color:#4285f4;font-size:20px}.lf-or{text-align:center;color:#82918b;margin:14px}.lf-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lf-tabs button{min-height:42px;border:1px solid #d5e1dc;border-radius:10px;background:#f7faf9;font-weight:700;color:#31564a}.lf-tabs .on{background:#078a58;color:#fff}.lf-input{width:100%;box-sizing:border-box;min-height:46px;border:1px solid #ccd8d3;border-radius:11px;padding:0 13px;margin:6px 0;font-size:15px}.lf-primary,.lf-verify{border:0;background:#078a58;color:#fff;margin-top:8px}.lf-msg{display:none;background:#eff8f4;color:#176b50;border-radius:10px;padding:10px;margin-top:10px;font-size:13px;line-height:1.35}
-    `
-    document.head.appendChild(s)
-  }
-
-  function saveLogin(data){
-    if(data?.token)localStorage.setItem('apna-cart-token',data.token)
-    if(data?.user)localStorage.setItem('apna-cart-user',JSON.stringify(data.user))
-    location.reload()
-  }
-
-  async function loadFirebase(){
-    if(!window.firebase){
-      await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})
-    }
-    if(!window.firebase.auth){
-      await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/12.18.0/firebase-auth-compat.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})
-    }
-    if(!window.firebase.apps.length)window.firebase.initializeApp(CONFIG)
-    return window.firebase.auth()
-  }
-
-  function openFallback(){
-    if(document.getElementById('apna-login-fix'))return
-    css()
-    const root=document.createElement('div');root.id='apna-login-fix'
-    root.innerHTML='<div class="box"><button class="lf-close" type="button">×</button><h2>Login / Register</h2><p style="color:#60736b;margin:7px 0 0">Apna Cart me login karke shopping aur orders use karein.</p><button class="lf-google" type="button"><b>G</b> Continue with Google</button><div class="lf-or">OR</div><div class="lf-tabs"><button class="on" data-mode="email" type="button">Email OTP</button><button data-mode="phone" type="button">Mobile OTP</button></div><input class="lf-input lf-name" placeholder="Full name" autocomplete="name"><input class="lf-input lf-contact" placeholder="Email address" autocomplete="email"><button class="lf-primary lf-send" type="button">Send OTP</button><input class="lf-input lf-otp" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" style="display:none"><button class="lf-verify" type="button" style="display:none">Verify & Login</button><div class="lf-msg"></div></div>'
-    document.body.appendChild(root)
-    const close=()=>root.remove();root.querySelector('.lf-close').onclick=close;root.onclick=e=>{if(e.target===root)close()}
-    const msg=root.querySelector('.lf-msg'),name=root.querySelector('.lf-name'),contact=root.querySelector('.lf-contact'),otp=root.querySelector('.lf-otp'),send=root.querySelector('.lf-send'),verify=root.querySelector('.lf-verify'),tabs=[...root.querySelectorAll('.lf-tabs button')]
-    let mode='email',sent=false
-    const message=t=>{msg.textContent=t;msg.style.display=t?'block':'none'}
-    tabs.forEach(b=>b.onclick=()=>{mode=b.dataset.mode;tabs.forEach(x=>x.classList.toggle('on',x===b));contact.value='';contact.type=mode==='email'?'email':'tel';contact.placeholder=mode==='email'?'Email address':'Mobile number';sent=false;otp.style.display='none';verify.style.display='none';send.style.display='block';message('')})
-    root.querySelector('.lf-google').onclick=async()=>{try{const auth=await loadFirebase();const provider=new window.firebase.auth.GoogleAuthProvider();if(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent))await auth.signInWithRedirect(provider);else{const result=await auth.signInWithPopup(provider);const idToken=await result.user.getIdToken(true);const r=await fetch(`${API}/auth/firebase-google`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({idToken})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Google login verify nahi hua.');saveLogin(d)}}catch(e){message(e?.message||'Google login nahi hua.')}}
-    send.onclick=async()=>{const n=name.value.trim();let c=contact.value.trim();if(!n)return message('Full name dijiye.');if(mode==='email'){if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(c))return message('Valid email address dijiye.')}else{const d=c.replace(/\\D/g,'');if(d.length!==10)return message('10-digit mobile number dijiye.');c='+91'+d;contact.value=c}send.disabled=true;send.textContent='Sending...';try{const r=await fetch(`${API}/auth/request-otp`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:n,contact:c})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'OTP send nahi hua.');sent=true;otp.style.display='block';verify.style.display='block';send.style.display='none';message('OTP bhej diya gaya. OTP enter karein.')}catch(e){message(e?.message||'OTP send nahi hua.');send.disabled=false;send.textContent='Send OTP'}}
-    verify.onclick=async()=>{if(!sent)return;const c=contact.value.trim(),o=otp.value.trim();if(!/^\\d{6}$/.test(o))return message('6-digit OTP enter karein.');verify.disabled=true;verify.textContent='Verifying...';try{const r=await fetch(`${API}/auth/verify-otp`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({contact:c,otp:o})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'OTP verify nahi hua.');saveLogin(d)}catch(e){message(e?.message||'OTP verify nahi hua.');verify.disabled=false;verify.textContent='Verify & Login'}}
-  }
-
-  function loginClick(e){
-    if(busy||localStorage.getItem('apna-cart-token'))return
-    const el=e.target?.closest?.('button,a,[role="button"]');if(!el)return
-    const text=((el.textContent||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||'')).trim()
-    if(!/login|register|sign in/i.test(text))return
-    busy=true;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation()
-    window.dispatchEvent(new CustomEvent('apna-cart-open-login'))
-    setTimeout(()=>{if(!document.getElementById('apna-firebase-login'))openFallback();busy=false},350)
-  }
-
-  function init(){document.addEventListener('click',loginClick,true)}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init()
+  const CONFIG = { apiKey:'AIzaSyDCMQD18qjREFokYPS-3QabJGUoVc8pPeM',authDomain:'apna-cart-c60f4.firebaseapp.com',projectId:'apna-cart-c60f4',storageBucket:'apna-cart-c60f4.firebasestorage.app',messagingSenderId:'1032583871110',appId:'1:1032583871110:web:b2293cc1592cbd80aeaf07' }
+  let busy=false
+  const css=()=>{if(document.getElementById('apna-login-fix-css'))return;const s=document.createElement('style');s.id='apna-login-fix-css';s.textContent=`#apna-login-fix{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.52);display:flex;align-items:flex-end;justify-content:center}#apna-login-fix .box{width:min(100%,520px);max-height:90vh;overflow:auto;background:#fff;border-radius:26px 26px 0 0;padding:22px 20px 28px;font-family:Arial,sans-serif;box-shadow:0 -8px 30px rgba(0,0,0,.25)}#apna-login-fix h2{margin:0;color:#075d3e;font-size:24px}.lf-close{float:right;border:0;background:#eef6f2;color:#075d3e;border-radius:50%;width:38px;height:38px;font-size:22px}.lf-google,.lf-primary,.lf-verify{width:100%;min-height:48px;border-radius:11px;font-weight:800;font-size:15px}.lf-google{border:1px solid #ddd;background:#fff;color:#202124;margin-top:14px}.lf-google b{color:#4285f4;font-size:20px}.lf-or{text-align:center;color:#82918b;margin:14px}.lf-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lf-tabs button{min-height:42px;border:1px solid #d5e1dc;border-radius:10px;background:#f7faf9;font-weight:700;color:#31564a}.lf-tabs .on{background:#078a58;color:#fff}.lf-input{width:100%;box-sizing:border-box;min-height:46px;border:1px solid #ccd8d3;border-radius:11px;padding:0 13px;margin:6px 0;font-size:15px}.lf-primary,.lf-verify{border:0;background:#078a58;color:#fff;margin-top:8px}.lf-msg{display:none;background:#eff8f4;color:#176b50;border-radius:10px;padding:10px;margin-top:10px;font-size:13px;line-height:1.35}`;document.head.appendChild(s)}
+  function saveLogin(data){if(data?.token)localStorage.setItem('apna-cart-token',data.token);if(data?.user)localStorage.setItem('apna-cart-user',JSON.stringify(data.user));localStorage.setItem('apna-cart-open-account','1');location.reload()}
+  async function loadFirebase(){if(!window.firebase)await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});if(!window.firebase.auth)await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://www.gstatic.com/firebasejs/12.18.0/firebase-auth-compat.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});if(!window.firebase.apps.length)window.firebase.initializeApp(CONFIG);return window.firebase.auth()}
+  function openFallback(){if(document.getElementById('apna-login-fix'))return;css();const root=document.createElement('div');root.id='apna-login-fix';root.innerHTML='<div class="box"><button class="lf-close" type="button">×</button><h2>Login / Register</h2><p style="color:#60736b;margin:7px 0 0">Apna Cart me login karke shopping aur orders use karein.</p><button class="lf-google" type="button"><b>G</b> Continue with Google</button><div class="lf-or">OR</div><div class="lf-tabs"><button class="on" data-mode="email" type="button">Email OTP</button><button data-mode="phone" type="button">Mobile OTP</button></div><input class="lf-input lf-name" placeholder="Full name"><input class="lf-input lf-contact" placeholder="Email address"><button class="lf-primary lf-send" type="button">Send OTP</button><input class="lf-input lf-otp" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" style="display:none"><button class="lf-verify" type="button" style="display:none">Verify & Login</button><div class="lf-msg"></div></div>';document.body.appendChild(root);const close=()=>root.remove();root.querySelector('.lf-close').onclick=close;root.onclick=e=>{if(e.target===root)close()};const msg=root.querySelector('.lf-msg'),name=root.querySelector('.lf-name'),contact=root.querySelector('.lf-contact'),otp=root.querySelector('.lf-otp'),send=root.querySelector('.lf-send'),verify=root.querySelector('.lf-verify'),tabs=[...root.querySelectorAll('.lf-tabs button')];let mode='email',sent=false;const message=t=>{msg.textContent=t;msg.style.display=t?'block':'none'};tabs.forEach(b=>b.onclick=()=>{mode=b.dataset.mode;tabs.forEach(x=>x.classList.toggle('on',x===b));contact.value='';contact.type=mode==='email'?'email':'tel';contact.placeholder=mode==='email'?'Email address':'Mobile number';sent=false;otp.style.display='none';verify.style.display='none';send.style.display='block';message('')});root.querySelector('.lf-google').onclick=async()=>{try{const auth=await loadFirebase();const provider=new window.firebase.auth.GoogleAuthProvider();if(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent))await auth.signInWithRedirect(provider);else{const result=await auth.signInWithPopup(provider);const idToken=await result.user.getIdToken(true);const r=await fetch(`${API}/auth/firebase-google`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({idToken})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Google login verify nahi hua.');saveLogin(d)}}catch(e){message(e?.message||'Google login nahi hua.')}};send.onclick=async()=>{const n=name.value.trim();let c=contact.value.trim();if(!n)return message('Full name dijiye.');if(mode==='email'){if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c))return message('Valid email address dijiye.')}else{const d=c.replace(/\D/g,'');if(d.length!==10)return message('10-digit mobile number dijiye.');c='+91'+d;contact.value=c}send.disabled=true;send.textContent='Sending...';try{const r=await fetch(`${API}/auth/request-otp`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:n,contact:c})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'OTP send nahi hua.');sent=true;otp.style.display='block';verify.style.display='block';send.style.display='none';message('OTP bhej diya gaya. OTP enter karein.')}catch(e){message(e?.message||'OTP send nahi hua.');send.disabled=false;send.textContent='Send OTP'}};verify.onclick=async()=>{if(!sent)return;const c=contact.value.trim(),o=otp.value.trim();if(!/^\d{6}$/.test(o))return message('6-digit OTP enter karein.');verify.disabled=true;verify.textContent='Verifying...';try{const r=await fetch(`${API}/auth/verify-otp`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({contact:c,otp:o})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'OTP verify nahi hua.');saveLogin(d)}catch(e){message(e?.message||'OTP verify nahi hua.');verify.disabled=false;verify.textContent='Verify & Login'}}}
+  function loginClick(e){if(busy||localStorage.getItem('apna-cart-token'))return;const el=e.target?.closest?.('button,a,[role="button"]');if(!el)return;const text=((el.textContent||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||'')).trim();if(!/login|register|sign in/i.test(text))return;busy=true;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('apna-cart-open-login'));setTimeout(()=>{if(!document.getElementById('apna-firebase-login'))openFallback();busy=false},350)}
+  document.addEventListener('click',loginClick,true)
 })()
