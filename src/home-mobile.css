@@ -17,6 +17,8 @@
   .product-card { transition:transform .16s ease, box-shadow .16s ease !important; }
   .product-card:active { transform:scale(.985) !important; }
   .add-button:active, .search-action:active { transform:scale(.96) !important; }
+  .refer-pill { display:none !important; }
+  .heart.wishlisted { color:#e53935 !important; transform:scale(1.08); }
 }
 @media (max-width:430px) {
   .search-box { padding:0 10px !important; gap:5px !important; }
