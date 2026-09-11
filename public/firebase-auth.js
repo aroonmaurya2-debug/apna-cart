@@ -104,6 +104,7 @@
       button.disabled = true
       button.textContent = 'Opening Google...'
       try {
+        await initFirebase()
         await firebaseReady
         if (!auth) throw new Error(firebaseInitError || 'Google login load nahi hua. Firebase configuration check karein.')
         const provider = new window.firebase.auth.GoogleAuthProvider()
@@ -204,5 +205,4 @@
 
   window.addEventListener('apna-cart-open-login', showLogin)
   addStyles()
-  initFirebase()
 })()
