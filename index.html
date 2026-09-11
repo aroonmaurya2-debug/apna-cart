@@ -15,35 +15,11 @@
   <body>
     <div id="root"></div>
     <script type="module" src="./src/main.tsx"></script>
-    <script type="module" src="./src/referral-init.tsx"></script>
     <script src="./camera-fix.js?v=3"></script>
     <script src="./catalog-sync.js?v=1"></script>
     <script src="./profile-photo.js?v=1"></script>
     <script src="./login-access.js?v=1"></script>
     <script src="./account-page.js?v=4"></script>
     <script src="./firebase-auth.js?v=3"></script>
-    <script>
-      (() => {
-        const pendingKey = 'apna-cart-pending-whatsapp'
-        const hasLoginText = el => /login|log in|sign in|signin|register/i.test((el.innerText || el.textContent || '') + ' ' + (el.getAttribute('aria-label') || '') + ' ' + (el.getAttribute('title') || ''))
-        const findLogin = () => [...document.querySelectorAll('button,a,[role="button"]')].find(hasLoginText)
-        const closeReferral = () => document.querySelector('.referral-header button[aria-label="Back"]')?.click()
-        const openReferral = () => document.querySelector('.referral-fab,[aria-label="Refer and Earn"]')?.click()
-        const clickWhatsApp = () => document.querySelector('.whatsapp-btn')?.click()
-        document.addEventListener('click', event => {
-          const target = event.target
-          const button = target && typeof target.closest === 'function' ? target.closest('.whatsapp-btn') : null
-          if (!button || localStorage.getItem('apna-cart-token')) return
-          event.preventDefault(); event.stopPropagation(); localStorage.setItem(pendingKey, '1'); closeReferral()
-          setTimeout(() => { const login = findLogin(); if (login) login.click(); else window.dispatchEvent(new CustomEvent('apna-cart-open-login')) }, 150)
-        }, true)
-        const timer = setInterval(() => {
-          if (localStorage.getItem(pendingKey) !== '1' || !localStorage.getItem('apna-cart-token')) return
-          localStorage.removeItem(pendingKey); clearInterval(timer)
-          setTimeout(() => { openReferral(); setTimeout(clickWhatsApp, 900) }, 500)
-        }, 500)
-        setTimeout(() => clearInterval(timer), 180000)
-      })()
-    </script>
   </body>
 </html>
