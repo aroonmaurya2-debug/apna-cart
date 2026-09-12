@@ -8,6 +8,7 @@ import './home-match.css'
 import './home-reference.css'
 import './home-premium.css'
 import './filter-polish.css'
+import './product-detail-polish.css'
 
 type State = { error: unknown }
 
