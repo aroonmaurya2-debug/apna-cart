@@ -1,9 +1,9 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// Apna Cart is deployed as a GitHub Pages project site at /apna-cart/.
+// Apna Cart is served from the root of the Render web service.
 export default defineConfig({
-  base: '/apna-cart/',
+  base: '/',
   plugins: [react()],
   build: {
     rollupOptions: {
