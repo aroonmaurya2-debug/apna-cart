@@ -23,4 +23,23 @@ export const registerSellerProductRoutes = ({ app, getSession, clean, productsCo
     catch(error){console.error(error);return response.status(500).json({message:'Product could not be updated.'})}
   })
   app.delete('/api/products/:id', async (request,response)=>{const session=getSession(request);if(!session)return response.status(401).json({message:'Login required.'});try{const owned=await ownedProduct(session,request.params.id);if(!owned)return response.status(404).json({message:'Seller product not found.'});await owned.ref.update({status:'deleted',deletedAt:new Date().toISOString()});return response.json({ok:true,id:request.params.id})}catch(error){console.error(error);return response.status(500).json({message:'Product could not be deleted.'})}})
+
+  const sellerOrderRows = async (session) => {
+    const seller = await sellerForSession(session)
+    if (!seller) return null
+    const ordersCollection = productsCollection.firestore.collection('orders')
+    const snapshot = await ordersCollection.orderBy('createdAt', 'desc').get()
+    return { seller, orders: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(order => Array.isArray(order.items) && order.items.some(item => String(item.sellerId || '') === String(seller.id))).map(order => ({ ...order, items: order.items.filter(item => String(item.sellerId || '') === String(seller.id)) })) }
+  }
+  app.get('/api/sellers/orders', async (request,response)=>{
+    const session=getSession(request); if(!session)return response.status(401).json({message:'Seller login required.'})
+    try { const result=await sellerOrderRows(session); if(!result)return response.status(403).json({message:'Register as a seller first.'}); return response.json({orders:result.orders}) }
+    catch(error){console.error(error);return response.status(500).json({message:'Seller orders could not be loaded.'})}
+  })
+  app.patch('/api/sellers/orders/:id/status', async (request,response)=>{
+    const session=getSession(request); if(!session)return response.status(401).json({message:'Seller login required.'})
+    const status=clean(request.body?.status),location=clean(request.body?.location); const allowed=new Set(['Processing','Accepted','Shipped','Delivered']); if(!allowed.has(status)||!location)return response.status(400).json({message:'Valid status and location are required.'})
+    try { const result=await sellerOrderRows(session); if(!result)return response.status(403).json({message:'Register as a seller first.'}); const target=result.orders.find(order=>String(order.id)===String(request.params.id)); if(!target)return response.status(404).json({message:'Seller order not found.'}); const ref=productsCollection.firestore.collection('orders').doc(String(request.params.id)); const updatedAt=new Date().toISOString(); await ref.update({status,location,updatedAt}); return response.json({order:{...target,status,location,updatedAt}}) }
+    catch(error){console.error(error);return response.status(500).json({message:'Order status could not be updated.'})}
+  })
 }
