@@ -5,70 +5,19 @@
   function styles(){
     if(document.getElementById('auth-otp-style')) return;
     var s=document.createElement('style'); s.id='auth-otp-style';
-    s.textContent='.otp-status{margin:10px 0;padding:10px 12px;border-radius:10px;background:#edf8f2;color:#176143;font:600 13px system-ui}.otp-error{background:#fff1f1;color:#a32b2b}.otp-actions{display:flex;gap:8px;margin-top:8px}.otp-actions button{flex:1}.otp-back{background:#eef3f0!important;color:#234!important}.otp-resend{background:transparent!important;color:#087a49!important;border:1px solid #b9ddca!important}';
+    s.textContent='.otp-status{margin:10px 0;padding:10px 12px;border-radius:10px;background:#edf8f2;color:#176143;font:600 13px system-ui}.otp-error{background:#fff1f1;color:#a32b2b}.otp-actions{display:flex;gap:8px;margin-top:8px}.otp-actions button{flex:1}.otp-back{background:#eef3f0!important;color:#234!important}.otp-resend{background:transparent!important;color:#087a49!important;border:1px solid #b9ddca!important}.account-login-overlay{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.48);display:flex;align-items:flex-end;justify-content:center;padding:0}.account-login-card{width:min(520px,100%);box-sizing:border-box;background:#fff;border-radius:24px 24px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.22);font-family:system-ui}.account-login-card h2{margin:4px 0 6px;color:#075f3d;font-size:24px}.account-login-card .login-sub{margin:0 0 14px;color:#60736a;font-size:14px}.account-login-card input{width:100%;box-sizing:border-box;margin:6px 0;padding:13px;border:1px solid #cfe2d8;border-radius:12px;font-size:15px;outline:none}.account-login-card input:focus{border-color:#07834e;box-shadow:0 0 0 3px rgba(7,131,78,.1)}.account-login-card button{border:0;border-radius:12px;padding:13px;font-weight:800;cursor:pointer}.account-login-card .otp-send{width:100%;margin-top:8px;background:#07834e;color:#fff}.account-login-close{position:absolute;right:14px;top:12px;width:38px;height:38px;border-radius:50%;background:#eef3f0;color:#234;font-size:25px;line-height:1}.account-login-head{position:relative}.account-login-card .otp-actions{display:flex}.account-login-card .otp-actions button{width:auto;margin-top:0}.account-login-card .otp-back{background:#eef3f0!important}.account-login-card .otp-resend{background:transparent!important;color:#087a49!important;border:1px solid #b9ddca!important;width:100%;margin-top:8px}';
     document.head.appendChild(s);
   }
-  function msg(box,text,error){
-    var old=box.querySelector('.otp-status'); if(old) old.remove();
-    var p=document.createElement('div'); p.className='otp-status'+(error?' otp-error':''); p.textContent=text; box.appendChild(p); return p;
-  }
-  function input(box,placeholder,type){
-    var el=document.createElement('input'); el.placeholder=placeholder; el.type=type||'text'; el.autocomplete='one-time-code'; el.style.cssText='width:100%;box-sizing:border-box;margin:6px 0;padding:12px;border:1px solid #cfe2d8;border-radius:10px;font-size:15px'; box.appendChild(el); return el;
-  }
-  async function requestOtp(box,name,contact){
-    if(busy) return; busy=true;
-    var button=box.querySelector('.otp-send'); if(button) button.disabled=true;
-    try{
-      var r=await fetch(API+'/auth/request-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:name,contact:contact})});
-      var d=await r.json().catch(function(){return {}});
-      if(!r.ok) throw new Error(d.message||'OTP send nahi ho saka.');
-      renderVerify(box,name,contact,d.message||'OTP bhej diya gaya.');
-    }catch(e){ msg(box,e.message||'OTP send nahi ho saka.',true); if(button) button.disabled=false; }
-    busy=false;
-  }
-  function renderVerify(box,name,contact,notice){
-    box.innerHTML='';
-    var close=document.createElement('button'); close.className='close'; close.type='button'; close.textContent='×'; close.onclick=function(){var x=document.querySelector('.login-modal .close'); if(x&&x!==close)x.click()}; box.appendChild(close);
-    var h=document.createElement('h2'); h.textContent='Verify OTP'; box.appendChild(h);
-    var p=document.createElement('p'); p.textContent='OTP '+contact+' par bheja gaya hai.'; p.style.cssText='color:#52665d;font-size:14px'; box.appendChild(p);
-    var code=input(box,'6-digit OTP','text'); code.inputMode='numeric'; code.maxLength=6;
-    var status=msg(box,notice,false);
-    var actions=document.createElement('div'); actions.className='otp-actions';
-    var back=document.createElement('button'); back.className='otp-back'; back.type='button'; back.textContent='Back'; back.onclick=function(){renderLogin(box)};
-    var verify=document.createElement('button'); verify.className='otp-send'; verify.type='button'; verify.textContent='Verify & Login';
-    actions.appendChild(back); actions.appendChild(verify); box.appendChild(actions);
-    var resend=document.createElement('button'); resend.className='otp-resend'; resend.type='button'; resend.textContent='Resend OTP'; resend.style.cssText+=';margin-top:8px;width:100%'; resend.onclick=function(){requestOtp(box,name,contact)}; box.appendChild(resend);
-    verify.onclick=async function(){
-      var value=code.value.trim(); if(!/^\d{6}$/.test(value)){msg(box,'6 digit OTP daliye.',true);return}
-      if(busy)return; busy=true; verify.disabled=true;
-      try{
-        var r=await fetch(API+'/auth/verify-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({contact:contact,otp:value})});
-        var d=await r.json().catch(function(){return {}});
-        if(!r.ok) throw new Error(d.message||'OTP verify nahi hua.');
-        if(d.token) localStorage.setItem('apna-cart-token',d.token);
-        if(d.user) localStorage.setItem('apna-cart-user',JSON.stringify(d.user));
-        location.reload();
-      }catch(e){msg(box,e.message||'OTP verify nahi hua.',true);verify.disabled=false;}
-      busy=false;
-    };
-    code.focus();
-  }
-  function renderLogin(box){
-    box.innerHTML='';
-    var close=document.createElement('button'); close.className='close'; close.type='button'; close.textContent='×'; close.onclick=function(){var x=document.querySelector('.login-modal .close'); if(x&&x!==close)x.click()}; box.appendChild(close);
-    var h=document.createElement('h2'); h.textContent='Login / Register'; box.appendChild(h);
-    var name=input(box,'Name','text'); name.autocomplete='name';
-    var contact=input(box,'Mobile / Email','text'); contact.autocomplete='email';
-    var button=document.createElement('button'); button.className='otp-send'; button.type='button'; button.textContent='Send OTP'; box.appendChild(button);
-    button.onclick=function(){var n=name.value.trim(),c=contact.value.trim();if(!n||!c){msg(box,'Name aur mobile/email bhariye.',true);return}requestOtp(box,n,c)};
-  }
-  function wire(){
-    styles();
-    var box=document.querySelector('.login-modal'); if(!box)return;
-    if(box.getAttribute('data-otp-wired')==='1')return;
-    box.setAttribute('data-otp-wired','1');
-    renderLogin(box);
-  }
-  function start(){wire();var root=document.getElementById('root');if(root)new MutationObserver(function(){wire()}).observe(root,{childList:true,subtree:true});}
+  function msg(box,text,error){var old=box.querySelector('.otp-status');if(old)old.remove();var p=document.createElement('div');p.className='otp-status'+(error?' otp-error':'');p.textContent=text;box.appendChild(p);return p;}
+  function input(box,placeholder,type){var el=document.createElement('input');el.placeholder=placeholder;el.type=type||'text';el.autocomplete='one-time-code';box.appendChild(el);return el;}
+  function requestOtp(box,name,contact){if(busy)return;busy=true;var button=box.querySelector('.otp-send');if(button)button.disabled=true;fetch(API+'/auth/request-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:name,contact:contact})}).then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(!r.ok)throw new Error(d.message||'OTP send nahi ho saka.');renderVerify(box,name,contact,d.message||'OTP bhej diya gaya.');});}).catch(function(e){msg(box,e.message||'OTP send nahi ho saka.',true);if(button)button.disabled=false;}).finally(function(){busy=false;});}
+  function clearAndTitle(box,title,sub){box.innerHTML='';var head=document.createElement('div');head.className='account-login-head';var close=document.createElement('button');close.className='account-login-close';close.type='button';close.textContent='×';close.onclick=function(){closeModal()};head.appendChild(close);var h=document.createElement('h2');h.textContent=title;head.appendChild(h);box.appendChild(head);if(sub){var p=document.createElement('p');p.className='login-sub';p.textContent=sub;box.appendChild(p);}}
+  function renderVerify(box,name,contact){clearAndTitle(box,'Verify OTP','OTP '+contact+' par bheja gaya hai.');var code=input(box,'6-digit OTP','text');code.inputMode='numeric';code.maxLength=6;msg(box,'OTP bhej diya gaya.',false);var actions=document.createElement('div');actions.className='otp-actions';var back=document.createElement('button');back.className='otp-back';back.type='button';back.textContent='Back';back.onclick=function(){renderLogin(box)};var verify=document.createElement('button');verify.className='otp-send';verify.type='button';verify.textContent='Verify & Login';actions.appendChild(back);actions.appendChild(verify);box.appendChild(actions);var resend=document.createElement('button');resend.className='otp-resend';resend.type='button';resend.textContent='Resend OTP';resend.onclick=function(){requestOtp(box,name,contact)};box.appendChild(resend);verify.onclick=function(){var value=code.value.trim();if(!/^\d{6}$/.test(value)){msg(box,'6 digit OTP daliye.',true);return}if(busy)return;busy=true;verify.disabled=true;fetch(API+'/auth/verify-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({contact:contact,otp:value})}).then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(!r.ok)throw new Error(d.message||'OTP verify nahi hua.');if(d.token)localStorage.setItem('apna-cart-token',d.token);if(d.user)localStorage.setItem('apna-cart-user',JSON.stringify(d.user));location.reload();});}).catch(function(e){msg(box,e.message||'OTP verify nahi hua.',true);verify.disabled=false;}).finally(function(){busy=false;});};code.focus();}
+  function renderLogin(box){clearAndTitle(box,'Login / Register','Mobile ya email se OTP ke through login karein.');var name=input(box,'Name','text');name.autocomplete='name';var contact=input(box,'Mobile / Email','text');contact.autocomplete='email';var button=document.createElement('button');button.className='otp-send';button.type='button';button.textContent='Send OTP';box.appendChild(button);button.onclick=function(){var n=name.value.trim(),c=contact.value.trim();if(!n||!c){msg(box,'Name aur mobile/email bhariye.',true);return}requestOtp(box,n,c)};}
+  function closeModal(){var x=document.querySelector('.account-login-overlay');if(x)x.remove();var old=document.querySelector('.login-modal');if(old&&old.parentNode)old.parentNode.removeChild(old);}
+  function openAccountLogin(){styles();if(document.querySelector('.account-login-overlay'))return;var overlay=document.createElement('div');overlay.className='account-login-overlay';overlay.onclick=function(e){if(e.target===overlay)closeModal()};var card=document.createElement('div');card.className='account-login-card';overlay.appendChild(card);document.body.appendChild(overlay);renderLogin(card);}
+  function wireExisting(){var box=document.querySelector('.login-modal');if(!box)return;if(box.getAttribute('data-otp-wired')==='1')return;box.setAttribute('data-otp-wired','1');renderLogin(box);}
+  function accountClick(e){var btn=e.target.closest&&e.target.closest('.bottom-nav button');if(!btn)return;var text=(btn.textContent||'').toLowerCase();if(text.indexOf('account')===-1&&text.indexOf('profile')===-1)return;if(localStorage.getItem('apna-cart-user'))return;e.preventDefault();e.stopImmediatePropagation();openAccountLogin();}
+  function start(){styles();wireExisting();document.addEventListener('click',accountClick,true);var root=document.getElementById('root');if(root)new MutationObserver(function(){wireExisting()}).observe(root,{childList:true,subtree:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
