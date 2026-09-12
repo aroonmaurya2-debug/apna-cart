@@ -16,12 +16,6 @@
       } catch (_) {}
       window.addEventListener('error', (e) => { window.__apnaCartStartupError = String(e.error?.stack || e.message || 'Startup error'); });
       window.addEventListener('unhandledrejection', (e) => { window.__apnaCartStartupError = String(e.reason?.stack || e.reason || 'Startup error'); });
-      window.setTimeout(() => {
-        const root = document.getElementById('root');
-        if (root && root.querySelector('p')?.textContent?.includes('App load ho raha hai')) {
-          root.innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui"><div style="max-width:620px"><h2>Apna Cart start nahi ho paaya</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">' + String(window.__apnaCartStartupError || 'React startup failed').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre><button onclick="location.reload()">Reload App</button></div></main>';
-        }
-      }, 8000);
     </script>
   </head>
   <body>
@@ -40,5 +34,6 @@
     <script src="/account-page.js"></script>
     <script src="/firebase-auth.js"></script>
     <script src="/wishlist.js"></script>
+    <script src="/reference-ui.js"></script>
   </body>
 </html>
