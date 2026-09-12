@@ -9,6 +9,7 @@ import './home-reference.css'
 import './home-premium.css'
 import './filter-polish.css'
 import './product-detail-polish.css'
+import './cart-checkout-polish.css'
 
 type State = { error: unknown }
 
