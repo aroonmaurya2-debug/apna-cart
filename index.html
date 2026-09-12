@@ -3,14 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="apple-touch-icon" href="./app-icon.svg?version=6" />
-    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./app-icon.svg?version=7" />
+    <link rel="manifest" href="./manifest.webmanifest?v=7" />
     <meta name="description" content="Apna Cart - fashion, home, beauty, electronics aur grocery ek hi cart mein." />
     <meta name="theme-color" content="#183d30" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-status-bar-style" content="default" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Apna Cart</title>
+    <script>
+      (() => {
+        try {
+          const key = 'apna-cart-emergency-cleanup-v3';
+          if (sessionStorage.getItem(key)) return;
+          sessionStorage.setItem(key, '1');
+          if (!('serviceWorker' in navigator)) return;
+          navigator.serviceWorker.getRegistrations()
+            .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+            .then(() => ('caches' in window ? caches.keys() : []))
+            .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+            .then(() => location.reload())
+            .catch(() => undefined);
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root">
@@ -21,18 +37,18 @@
         </div>
       </main>
     </div>
-    <script src="./api-fix.js?v=4"></script>
-    <script type="module" src="./src/main.tsx"></script>
-    <script src="./camera-fix.js?v=3"></script>
-    <script src="./catalog-sync.js?v=2"></script>
-    <script src="./recently-viewed.js?v=2"></script>
-    <script src="./checkout-address.js?v=1"></script>
-    <script src="./order-tracking.js?v=1"></script>
-    <script src="./inventory.js?v=1"></script>
-    <script src="./notifications.js?v=1"></script>
-    <script src="./profile-photo.js?v=1"></script>
-    <script src="./login-access.js?v=1"></script>
-    <script src="./account-page.js?v=4"></script>
-    <script src="./firebase-auth.js?v=3"></script>
+    <script src="./api-fix.js?v=5"></script>
+    <script type="module" src="./src/main.tsx?v=7"></script>
+    <script src="./camera-fix.js?v=4"></script>
+    <script src="./catalog-sync.js?v=3"></script>
+    <script src="./recently-viewed.js?v=3"></script>
+    <script src="./checkout-address.js?v=2"></script>
+    <script src="./order-tracking.js?v=2"></script>
+    <script src="./inventory.js?v=2"></script>
+    <script src="./notifications.js?v=2"></script>
+    <script src="./profile-photo.js?v=2"></script>
+    <script src="./login-access.js?v=2"></script>
+    <script src="./account-page.js?v=5"></script>
+    <script src="./firebase-auth.js?v=4"></script>
   </body>
 </html>
