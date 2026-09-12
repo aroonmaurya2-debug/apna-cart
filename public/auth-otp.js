@@ -21,14 +21,55 @@
   }
   function msg(box,text,error){var old=box.querySelector('.otp-status');if(old)old.remove();var p=document.createElement('div');p.className='otp-status'+(error?' otp-error':'');p.textContent=text;box.appendChild(p);return p;}
   function input(box,placeholder,type){var el=document.createElement('input');el.placeholder=placeholder;el.type=type||'text';el.autocomplete='one-time-code';box.appendChild(el);return el;}
-  function requestOtp(box,name,contact){if(busy)return;busy=true;var button=box.querySelector('.otp-send');if(button)button.disabled=true;fetch(API+'/auth/request-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:name,contact:contact})}).then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(!r.ok)throw new Error(d.message||'OTP send nahi ho saka.');renderVerify(box,name,contact,d.message||'OTP bhej diya gaya.');});}).catch(function(e){msg(box,e.message||'OTP send nahi ho saka.',true);if(button)button.disabled=false;}).finally(function(){busy=false;});}
+  function requestOtp(box,name,contact){
+    if(busy)return;
+    busy=true;
+    var button=box.querySelector('.otp-send');
+    if(button)button.disabled=true;
+    fetch(API+'/auth/request-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:name,contact:contact})})
+      .then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(!r.ok)throw new Error(d.message||'OTP send nahi ho saka.');renderVerify(box,name,contact,d.message||'OTP bhej diya gaya.');});})
+      .catch(function(e){msg(box,e.message||'OTP send nahi ho saka.',true);if(button)button.disabled=false;})
+      .finally(function(){busy=false;});
+  }
   function clearAndTitle(box,title,sub){box.innerHTML='';var head=document.createElement('div');head.className='account-login-head';var close=document.createElement('button');close.className='account-login-close';close.type='button';close.textContent='×';close.onclick=function(){closeModal()};head.appendChild(close);var h=document.createElement('h2');h.textContent=title;head.appendChild(h);box.appendChild(head);if(sub){var p=document.createElement('p');p.className='login-sub';p.textContent=sub;box.appendChild(p);}}
-  function renderVerify(box,name,contact){clearAndTitle(box,'Verify OTP','OTP '+contact+' par bheja gaya hai.');var code=input(box,'6-digit OTP','text');code.inputMode='numeric';code.maxLength=6;msg(box,'OTP bhej diya gaya.',false);var actions=document.createElement('div');actions.className='otp-actions';var back=document.createElement('button');back.className='otp-back';back.type='button';back.textContent='Back';back.onclick=function(){renderLogin(box)};var verify=document.createElement('button');verify.className='otp-send';verify.type='button';verify.textContent='Verify & Login';actions.appendChild(back);actions.appendChild(verify);box.appendChild(actions);var resend=document.createElement('button');resend.className='otp-resend';resend.type='button';resend.textContent='Resend OTP';resend.onclick=function(){requestOtp(box,name,contact)};box.appendChild(resend);verify.onclick=function(){var value=code.value.trim();if(!/^\d{6}$/.test(value)){msg(box,'6 digit OTP daliye.',true);return}if(busy)return;busy=true;verify.disabled=true;fetch(API+'/auth/verify-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({contact:contact,otp:value})}).then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(!r.ok)throw new Error(d.message||'OTP verify nahi hua.');if(d.token)localStorage.setItem('apna-cart-token',d.token);if(d.user)localStorage.setItem('apna-cart-user',JSON.stringify(d.user));location.reload();});}).catch(function(e){msg(box,e.message||'OTP verify nahi hua.',true);verify.disabled=false;}).finally(function(){busy=false;});};code.focus();}
-  function renderLogin(box){clearAndTitle(box,'Login / Register','Mobile ya email se OTP ke through login karein.');var name=input(box,'Name','text');name.autocomplete='name';var contact=input(box,'Mobile / Email','text');contact.autocomplete='email';var button=document.createElement('button');button.className='otp-send';button.type='button';button.textContent='Send OTP';box.appendChild(button);button.onclick=function(){var n=name.value.trim(),c=contact.value.trim();if(!n||!c){msg(box,'Name aur mobile/email bhariye.',true);return}requestOtp(box,n,c)};}
-  function closeModal(){var x=document.querySelector('.account-login-overlay');if(x)x.remove();var old=document.querySelector('.login-modal');if(old&&old.parentNode)old.parentNode.removeChild(old);document.body.style.overflow='';}
+  function renderVerify(box,name,contact){
+    clearAndTitle(box,'Verify OTP','OTP '+contact+' par bheja gaya hai.');
+    var code=input(box,'6-digit OTP','text');code.inputMode='numeric';code.maxLength=6;code.autocomplete='one-time-code';msg(box,'OTP bhej diya gaya.',false);
+    var actions=document.createElement('div');actions.className='otp-actions';var back=document.createElement('button');back.className='otp-back';back.type='button';back.textContent='Back';back.onclick=function(){renderLogin(box)};var verify=document.createElement('button');verify.className='otp-send';verify.type='button';verify.textContent='Verify & Login';actions.appendChild(back);actions.appendChild(verify);box.appendChild(actions);
+    var resend=document.createElement('button');resend.className='otp-resend';resend.type='button';resend.textContent='Resend OTP';resend.onclick=function(){requestOtp(box,name,contact)};box.appendChild(resend);
+    verify.onclick=function(){
+      var value=code.value.trim();
+      if(!/^\d{6}$/.test(value)){msg(box,'6 digit OTP daliye.',true);return}
+      if(busy)return;
+      busy=true;verify.disabled=true;
+      fetch(API+'/auth/verify-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({contact:contact,otp:value})})
+        .then(function(r){return r.json().catch(function(){return {}}).then(function(d){
+          if(!r.ok)throw new Error(d.message||'OTP verify nahi hua.');
+          if(!d.token)throw new Error('Login token nahi mila. Dobara OTP verify karein.');
+          localStorage.setItem('apna-cart-token',d.token);
+          localStorage.setItem('apna-cart-auth-token',d.token);
+          if(d.user)localStorage.setItem('apna-cart-user',JSON.stringify(d.user));
+          localStorage.removeItem('apna-cart-login-in-progress');
+          localStorage.removeItem('apna-cart-open-account');
+          location.reload();
+        });})
+        .catch(function(e){msg(box,e.message||'OTP verify nahi hua.',true);verify.disabled=false;})
+        .finally(function(){busy=false;});
+    };
+    code.focus();
+  }
+  function renderLogin(box){
+    clearAndTitle(box,'Login / Register','Mobile ya email se OTP ke through login karein.');
+    var name=input(box,'Name','text');name.autocomplete='name';var contact=input(box,'Mobile / Email','text');contact.autocomplete='email';
+    var button=document.createElement('button');button.className='otp-send';button.type='button';button.textContent='Send OTP';box.appendChild(button);
+    button.onclick=function(){var n=name.value.trim(),c=contact.value.trim();if(!n||!c){msg(box,'Name aur mobile/email bhariye.',true);return}requestOtp(box,n,c)};
+  }
+  function closeModal(){var x=document.querySelector('.account-login-overlay');if(x)x.remove();var old=document.querySelector('.login-modal');if(old&&old.parentNode)old.parentNode.removeChild(old);document.body.style.overflow='';localStorage.removeItem('apna-cart-login-in-progress');localStorage.removeItem('apna-cart-open-account');}
   function openAccountLogin(){styles();if(document.querySelector('.account-login-overlay'))return;document.body.style.overflow='hidden';var overlay=document.createElement('div');overlay.className='account-login-overlay';overlay.onclick=function(e){if(e.target===overlay)closeModal()};var card=document.createElement('div');card.className='account-login-card';overlay.appendChild(card);document.body.appendChild(overlay);renderLogin(card);}
   function wireExisting(){var box=document.querySelector('.login-modal');if(!box)return;if(box.getAttribute('data-otp-wired')==='1')return;box.setAttribute('data-otp-wired','1');renderLogin(box);}
   function accountClick(e){var btn=e.target.closest&&e.target.closest('.bottom-nav button');if(!btn)return;var text=(btn.textContent||'').toLowerCase();if(text.indexOf('account')===-1&&text.indexOf('profile')===-1)return;if(localStorage.getItem('apna-cart-user'))return;e.preventDefault();e.stopImmediatePropagation();openAccountLogin();}
   function start(){styles();wireExisting();document.addEventListener('click',accountClick,true);var root=document.getElementById('root');if(root)new MutationObserver(function(){wireExisting()}).observe(root,{childList:true,subtree:true});}
+  window.openAccountLogin=openAccountLogin;
+  window.closeAccountLogin=closeModal;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
