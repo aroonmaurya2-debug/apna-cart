@@ -1,0 +1,42 @@
+/* Reference home layout: visual-only overrides; existing React handlers/features remain unchanged. */
+.app-shell { background:#f8faf9 !important; color:#173d30 !important; }
+.header { background:linear-gradient(180deg,#087a49 0%,#07985d 100%) !important; color:#fff !important; padding:10px 14px 12px !important; border:0 !important; box-shadow:0 4px 14px rgba(0,90,50,.18) !important; }
+.header .header-topline { min-height:48px !important; margin:0 !important; }
+.header .brand { color:#fff !important; font-size:28px !important; font-weight:900 !important; letter-spacing:-.5px !important; }
+.header .icon-button,.header .header-icon { color:#fff !important; background:rgba(255,255,255,.12) !important; border-color:rgba(255,255,255,.28) !important; }
+.search-box { border:1px solid #b9e4d0 !important; background:#fff !important; border-radius:18px !important; box-shadow:none !important; min-height:46px !important; }
+.search-box input { font-size:15px !important; }
+.search-action { width:38px !important; height:38px !important; border-radius:50% !important; }
+.category-strip { gap:9px !important; padding:8px 0 12px !important; }
+.category-item { border:1px solid #bfe5d2 !important; border-radius:22px !important; background:#f4fbf7 !important; color:#183d30 !important; }
+.category-item.active { background:#078f57 !important; color:#fff !important; border-color:#078f57 !important; }
+.category-icon { border-radius:12px !important; }
+.hero-banner { min-height:178px !important; margin:5px 0 18px !important; border-radius:16px !important; padding:24px 40% 22px 22px !important; }
+.hero-banner h1 { font-size:29px !important; }
+.hero-banner p { font-size:13px !important; }
+.hero-banner button { padding:10px 19px !important; border-radius:22px !important; }
+.section-heading { margin-bottom:8px !important; }
+.section-heading h2 { font-size:27px !important; color:#101f19 !important; }
+.section-heading button { color:#087a49 !important; font-weight:800 !important; }
+.product-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; }
+.product-card { border:1px solid #d9ebe1 !important; border-radius:15px !important; background:#fff !important; overflow:hidden !important; box-shadow:0 3px 12px rgba(20,80,52,.06) !important; }
+.product-info { padding:9px 10px 10px !important; }
+.product-info h3 { font-size:14px !important; line-height:1.15 !important; }
+.price-row strong { color:#087a49 !important; font-size:18px !important; }
+.add-button { min-height:36px !important; border-radius:9px !important; background:#078f57 !important; font-weight:800 !important; }
+.bottom-nav { background:#fff !important; border-top:1px solid #dcebe3 !important; box-shadow:0 -3px 12px rgba(20,80,52,.06) !important; }
+.bottom-nav button.active { color:#078f57 !important; }
+@media (max-width:430px) {
+  .header { padding:8px 10px 10px !important; }
+  .header .brand { font-size:24px !important; }
+  .search-box { min-height:43px !important; border-radius:18px !important; }
+  .hero-banner { min-height:150px !important; padding:18px 35% 17px 17px !important; border-radius:15px !important; }
+  .hero-banner h1 { font-size:22px !important; }
+  .hero-banner p { font-size:10px !important; margin-bottom:12px !important; }
+  .section-heading h2 { font-size:24px !important; }
+  .product-grid { gap:8px !important; }
+  .product-info { padding:8px !important; }
+  .product-info h3 { font-size:13px !important; }
+  .price-row strong { font-size:16px !important; }
+  .add-button { font-size:11px !important; min-height:34px !important; }
+}
