@@ -1,0 +1,34 @@
+/* Apna Cart premium green home - visual layer only */
+.app-shell{background:#f5faf7!important;min-height:100vh}
+.header{background:linear-gradient(135deg,#075f3d,#079b61)!important;padding:12px 14px 14px!important;border:0!important;box-shadow:0 7px 22px rgba(4,92,58,.18)!important}
+.header .header-topline{margin-bottom:10px!important}
+.header .brand{color:#fff!important;font-size:22px!important;font-weight:900!important;letter-spacing:-.4px}
+.header .search-box{background:#fff!important;border:0!important;border-radius:14px!important;height:42px!important;box-shadow:0 5px 16px rgba(0,0,0,.12)!important}
+.header .icon-button,.header .header-icon{background:rgba(255,255,255,.16)!important;color:#fff!important;border:1px solid rgba(255,255,255,.25)!important}
+.search-box input{font-weight:600!important}
+.category-strip{padding:12px 4px 15px!important;gap:12px!important;background:#fff;border-radius:0 0 18px 18px;box-shadow:0 3px 12px rgba(21,91,59,.06);margin:0 -2px 12px!important}
+.category-item{font-weight:800!important;color:#234c3a!important;min-width:70px}
+.category-icon{width:54px!important;height:54px!important;border-radius:17px!important;background:#e7f8ef!important;border:1px solid #d0eddd!important;box-shadow:none!important}
+.category-item.active .category-icon{background:linear-gradient(145deg,#079b61,#087448)!important;color:#fff!important;box-shadow:0 7px 15px rgba(7,155,97,.22)!important}
+.main-content{padding-top:4px!important}
+.hero-banner{margin:8px 0 18px!important;min-height:185px!important;border-radius:22px!important;background:linear-gradient(115deg,#e5f9d9,#c8efc9 60%,#a9dfb6)!important;box-shadow:0 9px 24px rgba(34,116,68,.11)!important}
+.hero-banner h1{font-size:30px!important;color:#075c3b!important}
+.hero-banner button{background:#076f45!important;box-shadow:0 6px 14px rgba(5,104,66,.18)!important}
+.hero-art{background:linear-gradient(145deg,#078b58,#075d3d)!important}
+.section-heading{margin:18px 2px 10px!important}
+.section-heading h2{font-size:20px!important;font-weight:900!important;color:#123d2d!important}
+.section-heading button{font-weight:800!important}
+.filter-row{background:#fff!important;border:1px solid #e0eee6!important;border-radius:15px!important;padding:7px!important;box-shadow:0 4px 13px rgba(21,91,59,.05)!important}
+.filter-row button,.filter-row select{background:#f7fbf9!important;border-color:#cde4d7!important;color:#164532!important}
+.product-grid{gap:12px!important}
+.product-card{background:#fff!important;border:1px solid #e0eee6!important;border-radius:17px!important;overflow:hidden!important;box-shadow:0 6px 18px rgba(17,82,51,.08)!important}
+.product-card img{background:#f1f7f3!important}
+.product-info h3{font-weight:800!important;color:#173e2e!important}
+.price-row strong{font-size:17px!important;color:#0a6843!important}
+.add-button{border-radius:11px!important;font-weight:900!important;background:linear-gradient(90deg,#087b4d,#08a064)!important;box-shadow:0 5px 12px rgba(8,128,78,.16)!important}
+.discount{border-radius:6px!important}
+.bottom-nav{background:rgba(255,255,255,.97)!important;border-top:1px solid #dcece3!important;box-shadow:0 -5px 18px rgba(18,75,48,.08)!important}
+.bottom-nav button{font-weight:700!important;color:#678075!important}
+.bottom-nav button.active{color:#078e59!important}
+.bottom-nav button.active:after{height:3px!important;border-radius:3px!important;background:#078e59!important}
+@media(max-width:430px){.header{padding:9px 10px 11px!important}.header .brand{font-size:20px!important}.hero-banner{min-height:158px!important;border-radius:18px!important;padding:20px 34% 18px 18px!important}.hero-banner h1{font-size:22px!important}.hero-art{width:108px!important;height:94px!important;font-size:50px!important;right:3%!important}.category-icon{width:50px!important;height:50px!important}.product-grid{gap:9px!important}.product-card{border-radius:14px!important}.product-info{padding:8px!important}}
