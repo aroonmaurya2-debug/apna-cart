@@ -20,7 +20,9 @@ class AppErrorBoundary extends Component<Props, State> {
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Apna Cart root element missing')
+;(window as any).__apnaCartReactStarted = true
 createRoot(root).render(<StrictMode><AppErrorBoundary><App /></AppErrorBoundary></StrictMode>)
+;(window as any).__apnaCartReactMounted = true
 
 function setSearchInput(input: HTMLInputElement, text: string) { const value = text.trim(); if (!value) return; input.focus(); const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set; if (setter) setter.call(input, value); else input.value = value; input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value })); input.dispatchEvent(new Event('change', { bubbles: true })) }
 function loadTesseract() { return new Promise<any>((resolve, reject) => { const existing = (window as any).Tesseract; if (existing) return resolve(existing); const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; script.async = true; script.onload = () => resolve((window as any).Tesseract); script.onerror = () => reject(new Error('OCR library load failed')); document.head.appendChild(script) }) }
