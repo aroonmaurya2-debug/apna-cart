@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="apple-touch-icon" href="./app-icon.svg?version=11" />
-    <link rel="manifest" href="./manifest.webmanifest?v=11" />
+    <link rel="apple-touch-icon" href="./app-icon.svg?version=12" />
+    <link rel="manifest" href="./manifest.webmanifest?v=12" />
     <meta name="description" content="Apna Cart - fashion, home, beauty, electronics aur grocery ek hi cart mein." />
     <meta name="theme-color" content="#183d30" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -13,21 +13,28 @@
     <title>Apna Cart</title>
     <script>
       (() => {
-        const CLEAN_KEY = 'apna-cart-clean-reload-v2';
+        const KEY = 'apna-cart-fresh-html-v12';
         try {
-          if (!('serviceWorker' in navigator)) return;
-          if (sessionStorage.getItem(CLEAN_KEY) === '1') return;
-          sessionStorage.setItem(CLEAN_KEY, '1');
-          navigator.serviceWorker.getRegistrations().then(async (regs) => {
-            await Promise.all(regs.map((registration) => registration.unregister()));
-            if ('caches' in window) {
-              const keys = await caches.keys();
-              await Promise.all(keys.map((key) => caches.delete(key)));
-            }
-            location.reload();
-          }).catch(() => {
-            sessionStorage.removeItem(CLEAN_KEY);
-          });
+          if (sessionStorage.getItem(KEY) === '1') return;
+          sessionStorage.setItem(KEY, '1');
+          const clean = async () => {
+            try {
+              if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map((registration) => registration.unregister()));
+              }
+            } catch (_) {}
+            try {
+              if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map((key) => caches.delete(key)));
+              }
+            } catch (_) {}
+            const url = new URL(location.href);
+            url.searchParams.set('acv', '12');
+            location.replace(url.href);
+          };
+          void clean();
         } catch (_) {}
       })();
 
@@ -39,13 +46,13 @@
       });
       window.setTimeout(() => {
         try {
-          if (!window.__apnaCartReactMounted && !window.__apnaCartReactStarted && document.getElementById('root')) {
+          if (!window.__apnaCartReactMounted && document.getElementById('root')) {
             const root = document.getElementById('root');
-            const error = window.__apnaCartStartupError || 'React JavaScript module start nahi hua. Browser ne app bundle load/evaluate nahi ki.';
-            root.innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui;background:#fff7f7;color:#4a2020"><div style="max-width:620px;padding:24px;border:1px solid #f0caca;border-radius:18px;background:#fff"><h2 style="margin:0 0 10px">Apna Cart start nahi ho paaya</h2><p style="color:#6b5555">Exact startup error:</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:#fff0f0;padding:12px;border-radius:10px">' + error.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre><p style="font-size:13px;color:#6b5555">Is message ka screenshot bhejna; ab error exact pakad ke fix kar dunga.</p><button onclick="location.reload()" style="border:0;border-radius:10px;padding:11px 18px;background:#07985d;color:#fff;font-weight:800">Reload App</button></div></main>';
+            const error = window.__apnaCartStartupError || 'React app bundle load/evaluate nahi hua.';
+            root.innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui;background:#fff7f7;color:#4a2020"><div style="max-width:620px;padding:24px;border:1px solid #f0caca;border-radius:18px;background:#fff"><h2 style="margin:0 0 10px">Apna Cart start nahi ho paaya</h2><p style="color:#6b5555">Exact startup error:</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:#fff0f0;padding:12px;border-radius:10px">' + error.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre><button onclick="location.reload()" style="border:0;border-radius:10px;padding:11px 18px;background:#07985d;color:#fff;font-weight:800">Reload App</button></div></main>';
           }
         } catch (_) {}
-      }, 5000);
+      }, 7000);
     </script>
   </head>
   <body>
@@ -57,18 +64,18 @@
         </div>
       </main>
     </div>
-    <script type="module" src="./src/boot.ts?v=2"></script>
-    <script src="./api-fix.js?v=9"></script>
-    <script src="./camera-fix.js?v=8"></script>
-    <script src="./catalog-sync.js?v=7"></script>
-    <script src="./recently-viewed.js?v=7"></script>
-    <script src="./checkout-address.js?v=6"></script>
-    <script src="./order-tracking.js?v=6"></script>
-    <script src="./inventory.js?v=6"></script>
-    <script src="./notifications.js?v=6"></script>
-    <script src="./profile-photo.js?v=6"></script>
-    <script src="./login-access.js?v=6"></script>
-    <script src="./account-page.js?v=9"></script>
-    <script src="./firebase-auth.js?v=8"></script>
+    <script type="module" src="./src/boot.ts?v=12"></script>
+    <script src="./api-fix.js?v=10"></script>
+    <script src="./camera-fix.js?v=9"></script>
+    <script src="./catalog-sync.js?v=8"></script>
+    <script src="./recently-viewed.js?v=8"></script>
+    <script src="./checkout-address.js?v=7"></script>
+    <script src="./order-tracking.js?v=7"></script>
+    <script src="./inventory.js?v=7"></script>
+    <script src="./notifications.js?v=7"></script>
+    <script src="./profile-photo.js?v=7"></script>
+    <script src="./login-access.js?v=7"></script>
+    <script src="./account-page.js?v=10"></script>
+    <script src="./firebase-auth.js?v=9"></script>
   </body>
 </html>
