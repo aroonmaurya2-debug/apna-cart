@@ -3,58 +3,41 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="apple-touch-icon" href="./app-icon.svg?version=14" />
-    <link rel="manifest" href="./manifest.webmanifest?v=14" />
+    <link rel="apple-touch-icon" href="./app-icon.svg?version=15" />
+    <link rel="manifest" href="./manifest.webmanifest?v=15" />
     <meta name="description" content="Apna Cart - fashion, home, beauty, electronics aur grocery ek hi cart mein." />
     <meta name="theme-color" content="#183d30" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Apna Cart</title>
     <script>
-      // Remove any legacy PWA worker/cache, but never block React startup on cleanup.
       try {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
-        }
+        if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
         if ('caches' in window) caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))).catch(() => {});
       } catch (_) {}
-      window.addEventListener('error', (event) => {
-        window.__apnaCartStartupError = String(event.error?.stack || event.message || 'Startup error');
-      });
-      window.addEventListener('unhandledrejection', (event) => {
-        window.__apnaCartStartupError = String(event.reason?.stack || event.reason || 'Startup error');
-      });
+      window.addEventListener('error', (e) => { window.__apnaCartStartupError = String(e.error?.stack || e.message || 'Startup error'); });
+      window.addEventListener('unhandledrejection', (e) => { window.__apnaCartStartupError = String(e.reason?.stack || e.reason || 'Startup error'); });
       window.setTimeout(() => {
-        try {
-          if (!window.__apnaCartReactMounted && !window.__apnaCartReactStarted && document.getElementById('root')) {
-            const root = document.getElementById('root');
-            const error = window.__apnaCartStartupError || 'React app bundle load/evaluate nahi hua.';
-            root.innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui;background:#fff7f7;color:#4a2020"><div style="max-width:620px;padding:24px;border:1px solid #f0caca;border-radius:18px;background:#fff"><h2 style="margin:0 0 10px">Apna Cart start nahi ho paaya</h2><p style="color:#6b5555">Exact startup error:</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:#fff0f0;padding:12px;border-radius:10px">' + error.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre><button onclick="location.reload()" style="border:0;border-radius:10px;padding:11px 18px;background:#07985d;color:#fff;font-weight:800">Reload App</button></div></main>';
-          }
-        } catch (_) {}
+        if (!window.__apnaCartReactMounted && !window.__apnaCartReactStarted) {
+          const root = document.getElementById('root');
+          if (root) root.innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui"><div style="max-width:620px"><h2>Apna Cart start nahi ho paaya</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">' + String(window.__apnaCartStartupError || 'React startup failed').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre><button onclick="location.reload()">Reload App</button></div></main>';
+        }
       }, 8000);
     </script>
   </head>
   <body>
-    <div id="root">
-      <main style="min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui;background:#f7fbff;color:#17304e">
-        <div style="text-align:center;max-width:420px">
-          <h2 style="margin:0 0 8px">Apna Cart</h2>
-          <p style="margin:0;color:#66798b">App load ho raha hai…</p>
-        </div>
-      </main>
-    </div>
-    <script type="module" src="./assets/app.js?v=14"></script>
-    <script src="./api-fix.js?v=12"></script>
-    <script src="./camera-fix.js?v=11"></script>
-    <script src="./catalog-sync.js?v=10"></script>
-    <script src="./recently-viewed.js?v=10"></script>
-    <script src="./checkout-address.js?v=9"></script>
-    <script src="./order-tracking.js?v=9"></script>
-    <script src="./inventory.js?v=9"></script>
-    <script src="./notifications.js?v=9"></script>
-    <script src="./profile-photo.js?v=9"></script>
-    <script src="./login-access.js?v=9"></script>
-    <script src="./account-page.js?v=12"></script>
-    <script src="./firebase-auth.js?v=11"></script>
+    <div id="root"><main style="min-height:100vh;display:grid;place-items:center;font-family:system-ui"><div style="text-align:center"><h2>Apna Cart</h2><p>App load ho raha hai…</p></div></main></div>
+    <script type="module" src="./src/entry.tsx"></script>
+    <script src="./api-fix.js?v=13"></script>
+    <script src="./camera-fix.js?v=12"></script>
+    <script src="./catalog-sync.js?v=11"></script>
+    <script src="./recently-viewed.js?v=11"></script>
+    <script src="./checkout-address.js?v=10"></script>
+    <script src="./order-tracking.js?v=10"></script>
+    <script src="./inventory.js?v=10"></script>
+    <script src="./notifications.js?v=10"></script>
+    <script src="./profile-photo.js?v=10"></script>
+    <script src="./login-access.js?v=10"></script>
+    <script src="./account-page.js?v=13"></script>
+    <script src="./firebase-auth.js?v=12"></script>
   </body>
 </html>
