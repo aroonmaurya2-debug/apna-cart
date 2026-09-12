@@ -1,5 +1,6 @@
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
+import App from './AppFixed.tsx'
 import './index.css'
 import './home-fix.css'
 import './home-mobile.css'
@@ -39,35 +40,10 @@ class StartupBoundary extends Component<{ children: ReactNode }, State> {
 const root = document.getElementById('root')
 if (!root) throw new Error('Apna Cart root element missing')
 
-const rootApp = createRoot(root)
-rootApp.render(
+createRoot(root).render(
   <StrictMode>
     <StartupBoundary>
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', fontFamily: 'system-ui' }}>Apna Cart load ho raha hai…</div>
+      <App />
     </StartupBoundary>
   </StrictMode>,
 )
-
-import('./AppFixed.tsx')
-  .then(({ default: App }) => {
-    rootApp.render(
-      <StrictMode>
-        <StartupBoundary>
-          <App />
-        </StartupBoundary>
-      </StrictMode>,
-    )
-  })
-  .catch((error) => {
-    rootApp.render(
-      <StartupBoundary>
-        <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, fontFamily: 'system-ui' }}>
-          <div style={{ maxWidth: 720 }}>
-            <h2>Apna Cart</h2>
-            <p>Frontend file load nahi ho pa rahi hai.</p>
-            <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 16, borderRadius: 12, overflow: 'auto' }}>{String(error?.stack || error?.message || error)}</pre>
-          </div>
-        </div>
-      </StartupBoundary>,
-    )
-  })
