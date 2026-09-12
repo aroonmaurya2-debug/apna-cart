@@ -6,10 +6,10 @@
     var filter=document.querySelector('.filter-row');
     if(!strip || !filter) return;
 
-    /* Put the real filter element in the normal document flow immediately
-       after the category strip. This keeps React controls functional and
-       avoids the overlap/scroll problems caused by absolute positioning. */
-    if(filter.parentNode === strip.parentNode && strip.nextElementSibling !== filter){
+    /* Always move the actual React filter row into the category section,
+       immediately after the category tiles. Do not depend on both elements
+       originally sharing the same parent because the React layout can change. */
+    if(strip.nextElementSibling !== filter){
       strip.parentNode.insertBefore(filter, strip.nextElementSibling);
     }
 
@@ -19,14 +19,10 @@
     filter.style.removeProperty('left');
     filter.style.removeProperty('width');
     filter.style.removeProperty('z-index');
-    filter.style.removeProperty('margin-top');
-
     filter.classList.add('filter-row-under-category');
 
     var menu=document.querySelector('.category-menu');
-    if(menu && menu.parentNode !== filter){
-      /* Leave the existing menu ownership untouched; only remove stale
-         inline positioning from the previous visual-placement helper. */
+    if(menu){
       menu.style.removeProperty('position');
       menu.style.removeProperty('top');
       menu.style.removeProperty('left');
