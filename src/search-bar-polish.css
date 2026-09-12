@@ -1,0 +1,25 @@
+/* Apna Cart search bar polish */
+.header .header-topline{display:flex!important;align-items:center!important;gap:9px!important}
+.header .brand{flex:0 0 auto!important;white-space:nowrap!important}
+.header .search-box{flex:1 1 auto!important;min-width:0!important;margin:0!important;padding:4px 5px 4px 13px!important;display:flex!important;align-items:center!important;gap:5px!important;background:#fff!important;border:0!important;border-radius:14px!important;height:42px!important;box-shadow:0 5px 16px rgba(0,0,0,.12)!important}
+.header .search-box input{min-width:0!important;flex:1 1 auto!important;height:34px!important;padding:0!important;font-size:13px!important;line-height:34px!important;font-weight:600!important;border:0!important;outline:0!important;background:transparent!important}
+.header .search-box input::placeholder{color:#7b8d84!important;font-weight:600!important}
+.header .search-box>button{flex:0 0 34px!important;width:34px!important;height:34px!important;margin:0!important;padding:0!important;border:1px solid #d4e9df!important;border-radius:10px!important;background:#eff9f4!important;color:#08794d!important;display:grid!important;place-items:center!important;font-size:17px!important;line-height:1!important;box-shadow:none!important;transition:transform .16s ease,background .16s ease!important}
+.header .search-box>button:hover{background:#e1f4eb!important}
+.header .search-box>button:active{transform:scale(.93)!important}
+.header .cart-head{flex:0 0 auto!important;min-width:40px!important}
+@media(max-width:600px){
+  .header{padding:9px 10px 11px!important}
+  .header .header-topline{gap:7px!important}
+  .header .brand{font-size:18px!important;letter-spacing:-.5px!important}
+  .header .search-box{height:40px!important;border-radius:13px!important;padding-left:10px!important;gap:4px!important}
+  .header .search-box input{font-size:12px!important}
+  .header .search-box>button{flex-basis:31px!important;width:31px!important;height:31px!important;border-radius:9px!important;font-size:16px!important}
+  .header .cart-head{min-width:36px!important;font-size:18px!important}
+}
+@media(max-width:380px){
+  .header .brand{font-size:17px!important}
+  .header .search-box input{font-size:11px!important}
+  .header .search-box>button{flex-basis:29px!important;width:29px!important;height:29px!important;font-size:15px!important}
+  .header .cart-head{min-width:32px!important}
+}
