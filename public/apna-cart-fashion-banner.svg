@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-label="Apna Cart fashion shopping banner">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#efffe8"/><stop offset="0.58" stop-color="#d4f6c9"/><stop offset="1" stop-color="#a9e5b6"/></linearGradient>
+  <linearGradient id="bag1" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#14b878"/><stop offset="1" stop-color="#087a49"/></linearGradient>
+  <linearGradient id="bag2" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff6fae"/><stop offset="1" stop-color="#e73578"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#075f3d" flood-opacity=".16"/></filter>
+</defs>
+<rect width="1200" height="520" rx="36" fill="url(#bg)"/>
+<circle cx="950" cy="260" r="190" fill="#087a49" opacity=".96"/>
+<circle cx="1030" cy="130" r="44" fill="#fff" opacity=".2"/>
+<circle cx="820" cy="390" r="28" fill="#fff" opacity=".24"/>
+<g filter="url(#shadow)">
+  <path d="M835 195h116l-12 180H847z" fill="url(#bag1)"/>
+  <path d="M861 202c0-58 65-58 65 0" fill="none" stroke="#0a6945" stroke-width="18" stroke-linecap="round"/>
+  <path d="M925 230h120l-13 176H938z" fill="url(#bag2)"/>
+  <path d="M950 237c0-58 65-58 65 0" fill="none" stroke="#bd2f66" stroke-width="18" stroke-linecap="round"/>
+  <path d="M900 300l-28 45 55 0z" fill="#6ce0ad" opacity=".85"/>
+</g>
+<g fill="#087a49" opacity=".15"><circle cx="735" cy="145" r="10"/><circle cx="1080" cy="355" r="13"/><circle cx="760" cy="350" r="7"/></g>
+</svg>
