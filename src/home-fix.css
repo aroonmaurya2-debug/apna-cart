@@ -104,3 +104,48 @@
   .filter-row select { height:38px !important; padding:0 20px 0 4px !important; border-radius:9px !important; font-size:11px !important; }
   .filter-row select { background-position:calc(100% - 9px) 16px,calc(100% - 6px) 16px !important; }
 }
+
+/* Screenshot-style Apna Cart header. Existing buttons/handlers remain untouched. */
+.header { height:auto !important; max-width:none !important; width:100% !important; margin:0 !important; padding:10px 12px 12px !important; display:block !important; border-bottom:1px solid #dcefe4 !important; background:linear-gradient(180deg,#087a49 0%,#07985d 100%) !important; box-shadow:0 5px 18px rgba(5,90,53,.18) !important; }
+.header .header-topline { width:100% !important; min-height:40px !important; display:flex !important; align-items:center !important; justify-content:space-between !important; gap:8px !important; margin:0 0 9px !important; }
+.header .brand { color:#fff !important; font-size:21px !important; font-weight:900 !important; border:0 !important; background:transparent !important; padding:0 !important; min-width:max-content !important; }
+.header .brand:hover { color:#fff !important; }
+.header .search-box { flex:1 1 auto !important; min-width:0 !important; height:40px !important; border:0 !important; border-radius:13px !important; background:#fff !important; box-shadow:0 4px 14px rgba(0,0,0,.12) !important; }
+.header .search-box input { color:#183d30 !important; font-size:12px !important; }
+.header .search-box input::placeholder { color:#8a9b92 !important; }
+.header .icon-button,
+.header .header-icon,
+.header button { border-radius:11px; }
+.header .icon-button { width:38px !important; height:38px !important; border:1px solid rgba(255,255,255,.28) !important; background:rgba(255,255,255,.16) !important; color:#fff !important; }
+.header .search-action { background:#eef9f3 !important; color:#087a49 !important; border-color:#d1ebdc !important; }
+.header + * { position:relative; }
+
+/* Home page content stays clean white, with compact Meesho-style spacing. */
+.app-shell { background:#f7faf8 !important; color:#183d30 !important; }
+.main-content, main { max-width:1280px; margin:0 auto; }
+.category-strip { overflow-x:auto !important; scrollbar-width:none !important; }
+.category-strip::-webkit-scrollbar { display:none !important; }
+.section-heading { align-items:center !important; }
+.section-heading h2 { font-size:20px !important; font-weight:900 !important; }
+.product-card { overflow:hidden !important; border-radius:14px !important; background:#fff !important; }
+.product-image { aspect-ratio:1/1.08 !important; background:#f1f6f3 !important; }
+.product-image img { width:100% !important; height:100% !important; object-fit:cover !important; display:block !important; }
+.product-info h3 { color:#183d30 !important; font-weight:800 !important; line-height:1.25 !important; overflow:hidden !important; display:-webkit-box !important; -webkit-line-clamp:2 !important; -webkit-box-orient:vertical !important; }
+.wishlist-button { right:8px !important; top:8px !important; width:31px !important; height:31px !important; background:rgba(255,255,255,.94) !important; color:#087a49 !important; box-shadow:0 3px 10px rgba(0,0,0,.10) !important; }
+.add-button { border-radius:9px !important; border:0 !important; color:#fff !important; font-weight:800 !important; }
+.bottom-nav { border-top:1px solid #dcefe4 !important; background:rgba(255,255,255,.98) !important; box-shadow:0 -5px 18px rgba(18,82,52,.08) !important; }
+
+@media (max-width:600px) {
+  .header { padding:8px 10px 10px !important; }
+  .header .header-topline { gap:6px !important; margin-bottom:7px !important; }
+  .header .brand { font-size:18px !important; }
+  .header .search-box { height:38px !important; border-radius:12px !important; }
+  .header .icon-button { width:34px !important; height:34px !important; border-radius:10px !important; }
+  .product-grid { gap:8px !important; padding-left:8px !important; padding-right:8px !important; }
+  .product-info { padding:8px !important; }
+  .product-info h3 { font-size:12px !important; min-height:31px !important; }
+  .product-description { display:none !important; }
+  .price-row { gap:5px !important; flex-wrap:wrap !important; }
+  .price-row strong { font-size:15px !important; }
+  .add-button { min-height:36px !important; padding:8px 4px !important; font-size:11px !important; }
+}
