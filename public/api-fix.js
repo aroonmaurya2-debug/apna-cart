@@ -9,16 +9,15 @@
     return originalFetch(input, init);
   };
 
-  // Clear old Apna Cart service-worker control/cache so stale GitHub Pages
-  // bundles cannot keep the app on a blank screen after a deployment.
-  if ('serviceWorker' in navigator) {
+  // One-time cleanup of every old Apna Cart service worker/cache.
+  // Reload only after unregistering so an old cached bundle cannot keep the app blank.
+  if ('serviceWorker' in navigator && !sessionStorage.getItem('apna-cart-sw-cleared')) {
+    sessionStorage.setItem('apna-cart-sw-cleared', '1');
     navigator.serviceWorker.getRegistrations()
       .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
-      .catch(() => undefined);
-  }
-  if ('caches' in window) {
-    caches.keys()
+      .then(() => ('caches' in window) ? caches.keys() : [])
       .then((keys) => Promise.all(keys.filter((key) => key.startsWith('apna-cart-')).map((key) => caches.delete(key))))
+      .then(() => window.location.reload())
       .catch(() => undefined);
   }
 })();
