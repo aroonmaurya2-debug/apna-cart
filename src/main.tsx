@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import './home-fix.css'
 import './home-mobile.css'
+import './home-match.css'
 import App from './AppFixed.tsx'
 
 type Props = { children: ReactNode }
