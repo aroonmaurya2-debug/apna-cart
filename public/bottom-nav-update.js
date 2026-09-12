@@ -2,18 +2,18 @@
   'use strict';
   function updateNav(){
     var nav=document.querySelector('.bottom-nav');
-    if(!nav || nav.dataset.apnaNavUpdated==='1') return;
+    if(!nav || nav.dataset.apnaNavUpdated==='2') return;
     var old=Array.from(nav.querySelectorAll('button'));
-    if(old.length<4) return;
+    if(old.length<2) return;
 
     var home=old[0], orders=old[1];
-    nav.dataset.apnaNavUpdated='1';
+    nav.dataset.apnaNavUpdated='2';
     nav.innerHTML='';
 
-    function make(icon,label,handler){
+    function make(icon,label,handler,extra){
       var b=document.createElement('button');
       b.type='button';
-      b.className='apna-bottom-item';
+      b.className='apna-bottom-item'+(extra?' '+extra:'');
       b.innerHTML='<span class="apna-bottom-icon">'+icon+'</span><span>'+label+'</span>';
       b.addEventListener('click',handler);
       nav.appendChild(b);
@@ -22,6 +22,10 @@
 
     make('⌂','Home',function(){home.click()});
     make('▦','Orders',function(){orders.click()});
+    make('▤','Category',function(){
+      var cat=document.querySelector('.category-strip');
+      if(cat) cat.scrollIntoView({behavior:'smooth',block:'start'});
+    },'apna-category-bottom-item');
     make('🏬','Mall',function(){
       var cat=document.querySelector('.category-strip');
       if(cat) cat.scrollIntoView({behavior:'smooth',block:'start'});
