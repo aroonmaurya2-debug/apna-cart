@@ -1,50 +1,52 @@
 (function(){
   'use strict';
 
-  function positionFilters(){
+  function placeFilterRow(){
     var strip=document.querySelector('.category-strip');
     var filter=document.querySelector('.filter-row');
-    if(!strip || !filter){
-      if(filter){
-        filter.style.removeProperty('position');
-        filter.style.removeProperty('top');
-        filter.style.removeProperty('left');
-        filter.style.removeProperty('width');
-        filter.style.removeProperty('z-index');
-      }
-      return;
+    if(!strip || !filter) return;
+
+    /* Put the real filter element in the normal document flow immediately
+       after the category strip. This keeps React controls functional and
+       avoids the overlap/scroll problems caused by absolute positioning. */
+    if(filter.parentNode === strip.parentNode && strip.nextElementSibling !== filter){
+      strip.parentNode.insertBefore(filter, strip.nextElementSibling);
     }
 
-    var r=strip.getBoundingClientRect();
-    var top=r.bottom + window.scrollY + 8;
-    filter.style.setProperty('position','absolute','important');
-    filter.style.setProperty('top',top+'px','important');
-    filter.style.setProperty('left',r.left+'px','important');
-    filter.style.setProperty('width',r.width+'px','important');
-    filter.style.setProperty('z-index','1100','important');
-    filter.style.setProperty('box-sizing','border-box','important');
+    strip.style.removeProperty('margin-bottom');
+    filter.style.removeProperty('position');
+    filter.style.removeProperty('top');
+    filter.style.removeProperty('left');
+    filter.style.removeProperty('width');
+    filter.style.removeProperty('z-index');
+    filter.style.removeProperty('margin-top');
 
-    strip.style.setProperty('margin-bottom','56px','important');
+    filter.classList.add('filter-row-under-category');
 
     var menu=document.querySelector('.category-menu');
-    if(menu){
-      var fr=filter.getBoundingClientRect();
-      menu.style.setProperty('position','absolute','important');
-      menu.style.setProperty('top',(fr.bottom + window.scrollY + 6)+'px','important');
-      menu.style.setProperty('left',r.left+'px','important');
-      menu.style.setProperty('right','auto','important');
-      menu.style.setProperty('width',r.width+'px','important');
-      menu.style.setProperty('box-sizing','border-box','important');
-      menu.style.setProperty('z-index','1200','important');
+    if(menu && menu.parentNode !== filter){
+      /* Leave the existing menu ownership untouched; only remove stale
+         inline positioning from the previous visual-placement helper. */
+      menu.style.removeProperty('position');
+      menu.style.removeProperty('top');
+      menu.style.removeProperty('left');
+      menu.style.removeProperty('right');
+      menu.style.removeProperty('width');
     }
   }
 
   function start(){
-    positionFilters();
-    window.addEventListener('resize',positionFilters,{passive:true});
-    window.addEventListener('scroll',positionFilters,{passive:true});
-    new MutationObserver(function(){requestAnimationFrame(positionFilters)}).observe(document.body,{childList:true,subtree:true});
+    placeFilterRow();
+    window.addEventListener('resize',placeFilterRow,{passive:true});
+    new MutationObserver(function(){requestAnimationFrame(placeFilterRow)}).observe(document.body,{childList:true,subtree:true});
   }
+
+  var style=document.createElement('style');
+  style.textContent=''
+    +'.filter-row-under-category{width:100%!important;box-sizing:border-box!important;margin:8px 0 12px!important;padding:0 2px!important;position:relative!important;top:auto!important;left:auto!important;z-index:10!important;}'
+    +'.category-strip{margin-bottom:0!important;}'
+    +'@media(max-width:430px){.filter-row-under-category{margin:7px 0 10px!important;padding:0!important;}}';
+  document.head.appendChild(style);
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
