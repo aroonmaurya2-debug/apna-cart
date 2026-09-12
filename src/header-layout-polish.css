@@ -1,0 +1,19 @@
+/* Keep the brand row clean: search starts directly underneath the logo/actions. */
+.header .header-topline{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  row-gap:9px!important;
+}
+.header .header-topline .brand{order:1!important}
+.header .header-topline .cart-head{order:2!important;margin-left:auto!important}
+.header .header-topline .search-box{
+  order:3!important;
+  flex:0 0 100%!important;
+  width:100%!important;
+  margin:0!important;
+}
+@media(max-width:430px){
+  .header .header-topline{row-gap:7px!important}
+  .header .header-topline .search-box{height:42px!important}
+}
