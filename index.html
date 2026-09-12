@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="apple-touch-icon" href="./app-icon.svg?version=8" />
-    <link rel="manifest" href="./manifest.webmanifest?v=8" />
+    <link rel="apple-touch-icon" href="./app-icon.svg?version=9" />
+    <link rel="manifest" href="./manifest.webmanifest?v=9" />
     <meta name="description" content="Apna Cart - fashion, home, beauty, electronics aur grocery ek hi cart mein." />
     <meta name="theme-color" content="#183d30" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -14,28 +14,35 @@
     <script>
       (() => {
         try {
-          const KEY = 'apna-cart-cache-kill-v4';
-          const alreadyCleaned = sessionStorage.getItem(KEY) === '1';
+          const KEY = 'apna-cart-cache-kill-v5';
           const hasSW = 'serviceWorker' in navigator;
-          if (!hasSW || alreadyCleaned) return;
-          sessionStorage.setItem(KEY, '1');
-          navigator.serviceWorker.getRegistrations()
-            .then((regs) => Promise.all(regs.map((r) => r.unregister())))
-            .then(() => ('caches' in window ? caches.keys() : []))
-            .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
-            .then(() => location.replace(location.pathname + '?fresh=v4'))
-            .catch(() => undefined);
+          if (hasSW && sessionStorage.getItem(KEY) !== '1') {
+            sessionStorage.setItem(KEY, '1');
+            navigator.serviceWorker.getRegistrations()
+              .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+              .then(() => ('caches' in window ? caches.keys() : []))
+              .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+              .then(() => location.replace(location.pathname + '?fresh=v5'))
+              .catch(() => undefined);
+          }
         } catch (_) {}
       })();
 
       window.addEventListener('error', (event) => {
-        if (event?.error || event?.message) {
-          window.__apnaCartStartupError = String(event.error?.stack || event.message || 'Startup error');
-        }
+        window.__apnaCartStartupError = String(event.error?.stack || event.message || 'Startup error');
       });
       window.addEventListener('unhandledrejection', (event) => {
         window.__apnaCartStartupError = String(event.reason?.stack || event.reason || 'Startup error');
       });
+      window.setTimeout(() => {
+        try {
+          if (!window.__apnaCartReactMounted && document.getElementById('root')) {
+            const root = document.getElementById('root');
+            const error = window.__apnaCartStartupError || 'React JavaScript module start nahi hua. Browser ne app script load/evaluate nahi ki.';
+            root.innerHTML = '<main style="min-height:100vh;display:grid;place-items:center;padding:24px;font-family:system-ui;background:#fff7f7;color:#4a2020"><div style="max-width:620px;padding:24px;border:1px solid #f0caca;border-radius:18px;background:#fff"><h2 style="margin:0 0 10px">Apna Cart start nahi ho paaya</h2><p style="color:#6b5555">Exact startup error:</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:#fff0f0;padding:12px;border-radius:10px">' + error.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre><p style="font-size:13px;color:#6b5555">Is message ka screenshot bhejna; ab error exact pakad ke fix kar dunga.</p><button onclick="location.reload()" style="border:0;border-radius:10px;padding:11px 18px;background:#07985d;color:#fff;font-weight:800">Reload App</button></div></main>';
+          }
+        } catch (_) {}
+      }, 5000);
     </script>
   </head>
   <body>
@@ -47,18 +54,18 @@
         </div>
       </main>
     </div>
-    <script src="./api-fix.js?v=6"></script>
-    <script type="module" src="./src/main.tsx?v=8"></script>
-    <script src="./camera-fix.js?v=5"></script>
-    <script src="./catalog-sync.js?v=4"></script>
-    <script src="./recently-viewed.js?v=4"></script>
-    <script src="./checkout-address.js?v=3"></script>
-    <script src="./order-tracking.js?v=3"></script>
-    <script src="./inventory.js?v=3"></script>
-    <script src="./notifications.js?v=3"></script>
-    <script src="./profile-photo.js?v=3"></script>
-    <script src="./login-access.js?v=3"></script>
-    <script src="./account-page.js?v=6"></script>
-    <script src="./firebase-auth.js?v=5"></script>
+    <script src="./api-fix.js?v=7"></script>
+    <script type="module" src="./src/main.tsx?v=9"></script>
+    <script src="./camera-fix.js?v=6"></script>
+    <script src="./catalog-sync.js?v=5"></script>
+    <script src="./recently-viewed.js?v=5"></script>
+    <script src="./checkout-address.js?v=4"></script>
+    <script src="./order-tracking.js?v=4"></script>
+    <script src="./inventory.js?v=4"></script>
+    <script src="./notifications.js?v=4"></script>
+    <script src="./profile-photo.js?v=4"></script>
+    <script src="./login-access.js?v=4"></script>
+    <script src="./account-page.js?v=7"></script>
+    <script src="./firebase-auth.js?v=6"></script>
   </body>
 </html>
