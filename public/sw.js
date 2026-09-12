@@ -1,48 +1,23 @@
-const CACHE_NAME = 'apna-cart-v22'
-const BASE = new URL('./', self.location).pathname
-const APP_SHELL = [
-  BASE,
-  `${BASE}manifest.webmanifest`,
-  `${BASE}app-icon.svg?version=6`,
-]
-
+// Apna Cart no longer uses a service worker. This file intentionally unregisters
+// any old worker and clears its caches so old app shells cannot break startup.
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)))
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
-    ).then(() => self.clients.claim()),
-  )
+  event.waitUntil((async () => {
+    try {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((key) => caches.delete(key)))
+    } catch (_) {}
+    try {
+      await self.registration.unregister()
+    } catch (_) {}
+    try {
+      const clients = await self.clients.matchAll()
+      clients.forEach((client) => client.navigate(client.url))
+    } catch (_) {}
+  })())
 })
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return
-
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const copy = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
-          return response
-        })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match(BASE))),
-    )
-    return
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) =>
-      cached ||
-      fetch(event.request).then((response) => {
-        const copy = response.clone()
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
-        return response
-      }).catch(() => caches.match(BASE)),
-    ),
-  )
-})
+self.addEventListener('fetch', () => {})
