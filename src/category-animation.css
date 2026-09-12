@@ -1,0 +1,68 @@
+/* Apna Cart animated category strip - visual only */
+.category-strip > button{
+  position:relative!important;
+  flex:0 0 auto!important;
+  transform:translateY(0) scale(1)!important;
+  transition:transform .22s ease, box-shadow .22s ease, background .22s ease!important;
+  animation:category-enter .55s both!important;
+  will-change:transform!important;
+}
+.category-strip > button::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.6) 48%,transparent 66%);
+  transform:translateX(-130%);
+  pointer-events:none;
+}
+.category-strip > button:hover{
+  transform:translateY(-5px) scale(1.04)!important;
+  box-shadow:0 9px 18px rgba(7,126,78,.15)!important;
+}
+.category-strip > button:hover::after{
+  animation:category-shine .7s ease forwards;
+}
+.category-strip > button:active{
+  transform:translateY(-1px) scale(.96)!important;
+}
+.category-strip > button > span{
+  display:grid!important;
+  place-items:center!important;
+  transform:translateY(0) rotate(0deg) scale(1)!important;
+  animation:category-icon-float 2.8s ease-in-out infinite!important;
+  transform-origin:center!important;
+}
+.category-strip > button:nth-child(2) > span{animation-delay:.12s!important}
+.category-strip > button:nth-child(3) > span{animation-delay:.24s!important}
+.category-strip > button:nth-child(4) > span{animation-delay:.36s!important}
+.category-strip > button:nth-child(5) > span{animation-delay:.48s!important}
+.category-strip > button:nth-child(6) > span{animation-delay:.60s!important}
+.category-strip > button:nth-child(7) > span{animation-delay:.72s!important}
+.category-strip > button:nth-child(8) > span{animation-delay:.84s!important}
+.category-strip > button:nth-child(9) > span{animation-delay:.96s!important}
+.category-strip > button:nth-child(10) > span{animation-delay:1.08s!important}
+.category-strip > button:nth-child(11) > span{animation-delay:1.20s!important}
+.category-strip > button:nth-child(12) > span{animation-delay:1.32s!important}
+
+@keyframes category-enter{
+  from{opacity:0;transform:translateY(12px) scale(.92)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes category-icon-float{
+  0%,100%{transform:translateY(0) rotate(0deg) scale(1)}
+  35%{transform:translateY(-3px) rotate(-2deg) scale(1.04)}
+  65%{transform:translateY(1px) rotate(2deg) scale(1.01)}
+}
+@keyframes category-shine{
+  from{transform:translateX(-130%)}
+  to{transform:translateX(130%)}
+}
+@media(max-width:800px){
+  .category-strip > button{scroll-snap-align:start!important}
+  .category-strip > button:hover{transform:translateY(-3px) scale(1.02)!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .category-strip > button,
+  .category-strip > button > span{animation:none!important;transition:none!important}
+}
