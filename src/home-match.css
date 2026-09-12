@@ -1,0 +1,154 @@
+/* Final mobile home match: make the existing Apna Cart JSX look like the supplied Meesho-style reference. */
+@media (max-width: 800px) {
+  html, body, #root { width:100%; min-width:0; overflow-x:hidden; }
+  body { margin:0; background:#f6faf8 !important; }
+  .app-shell { min-height:100vh; background:#f6faf8 !important; color:#183d30 !important; padding-bottom:68px !important; }
+
+  /* Green header: logo + search + cart, then compact filters. */
+  .header {
+    width:100% !important; max-width:none !important; height:auto !important; min-height:0 !important;
+    margin:0 !important; padding:10px 12px 12px !important; box-sizing:border-box !important;
+    display:block !important; background:linear-gradient(180deg,#087a49 0%,#07985d 100%) !important;
+    border:0 !important; box-shadow:none !important; position:relative !important; z-index:20 !important;
+  }
+  .header .header-topline {
+    width:100% !important; display:flex !important; align-items:center !important;
+    gap:8px !important; margin:0 0 10px !important; min-height:42px !important;
+  }
+  .header .brand {
+    flex:0 0 auto !important; min-width:auto !important; width:auto !important;
+    color:#fff !important; background:transparent !important; border:0 !important;
+    padding:0 !important; margin:0 !important; font:900 20px/1 system-ui,sans-serif !important;
+    white-space:nowrap !important;
+  }
+  .header .search-box {
+    flex:1 1 auto !important; min-width:0 !important; width:auto !important; height:42px !important;
+    display:flex !important; align-items:center !important; gap:4px !important;
+    padding:3px 5px 3px 13px !important; box-sizing:border-box !important;
+    background:#fff !important; border:0 !important; border-radius:14px !important;
+    box-shadow:none !important;
+  }
+  .header .search-box input { flex:1 1 auto !important; min-width:0 !important; width:1px !important; border:0 !important; outline:0 !important; background:transparent !important; color:#183d30 !important; font:500 12px system-ui,sans-serif !important; }
+  .header .search-box input::placeholder { color:#87978f !important; opacity:1 !important; }
+  .header .search-action { flex:0 0 34px !important; width:34px !important; height:34px !important; margin:0 !important; border:1px solid #cde9da !important; border-radius:11px !important; background:#f2faf6 !important; color:#087a49 !important; }
+  .header .search-action svg { width:19px !important; height:19px !important; }
+  .header .cart-head {
+    flex:0 0 42px !important; width:42px !important; height:42px !important; padding:0 !important;
+    border:1px solid #b8d8c7 !important; border-radius:12px !important; background:#fff !important;
+    color:#183d30 !important; font-size:20px !important; line-height:1 !important;
+    box-shadow:none !important; display:grid !important; place-items:center !important;
+  }
+  .header .cart-head span { display:block !important; font-size:11px !important; margin-top:-1px !important; }
+
+  /* Four compact, readable controls instead of clipped buttons. */
+  .header .filter-row {
+    display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:7px !important; width:100% !important; overflow:visible !important;
+    padding:0 !important; margin:0 !important;
+  }
+  .header .filter-row > button,
+  .header .filter-row > select {
+    min-width:0 !important; width:100% !important; height:42px !important; box-sizing:border-box !important;
+    padding:0 6px !important; border:1px solid #b9ddca !important; border-radius:12px !important;
+    background:#fff !important; color:#183d30 !important; font:700 11px/1 system-ui,sans-serif !important;
+    overflow:hidden !important; text-overflow:ellipsis !important; white-space:nowrap !important;
+    appearance:none !important; -webkit-appearance:none !important;
+  }
+  .header .filter-row > select { padding-right:18px !important; background-image:linear-gradient(45deg,transparent 50%,#087a49 50%),linear-gradient(135deg,#087a49 50%,transparent 50%) !important; background-position:calc(100% - 10px) 18px,calc(100% - 6px) 18px !important; background-size:4px 4px,4px 4px !important; background-repeat:no-repeat !important; }
+  .category-menu { position:absolute !important; left:12px !important; right:12px !important; top:110px !important; z-index:100 !important; max-height:55vh !important; overflow:auto !important; border-radius:14px !important; }
+
+  /* Home hero must always be visible. */
+  main { width:100% !important; max-width:none !important; margin:0 !important; padding:0 10px !important; box-sizing:border-box !important; }
+  .hero-swipe { display:flex !important; width:100% !important; overflow-x:auto !important; gap:0 !important; border-radius:17px !important; margin:10px 0 12px !important; }
+  .hero-swipe > .hero-banner,
+  main > .hero-banner {
+    display:grid !important; grid-template-columns:1fr 42% !important; flex:0 0 100% !important;
+    width:100% !important; min-height:155px !important; height:155px !important; box-sizing:border-box !important;
+    margin:0 !important; padding:20px 42% 18px 18px !important; overflow:hidden !important;
+    border:0 !important; border-radius:17px !important;
+    background:linear-gradient(105deg,#e8fbdc 0%,#d0f2c6 55%,#a8e4b4 100%) !important;
+    box-shadow:0 6px 18px rgba(18,90,55,.08) !important;
+  }
+  .hero-banner > div:first-child { z-index:2 !important; }
+  .hero-banner p { margin:0 0 4px !important; color:#0a7b4a !important; font:800 9px/1 system-ui,sans-serif !important; text-transform:uppercase !important; letter-spacing:.8px !important; }
+  .hero-banner h1 { margin:0 0 7px !important; color:#0b5736 !important; font:900 21px/1.05 system-ui,sans-serif !important; letter-spacing:-.4px !important; }
+  .hero-banner h1 b { color:#087a49 !important; }
+  .hero-banner span { color:#28553f !important; font:700 8px/1.2 system-ui,sans-serif !important; }
+  .hero-banner > button { position:absolute !important; left:18px !important; bottom:15px !important; z-index:3 !important; border:0 !important; border-radius:18px !important; background:#087a49 !important; color:#fff !important; padding:7px 13px !important; font:800 10px system-ui,sans-serif !important; }
+  .hero-banner:after { content:'🛍️' !important; position:absolute !important; right:6% !important; top:22px !important; width:105px !important; height:105px !important; display:grid !important; place-items:center !important; border-radius:50% !important; background:#087a49 !important; color:#fff !important; font-size:48px !important; box-shadow:0 12px 22px rgba(8,122,73,.18) !important; }
+  .hero-art { display:none !important; }
+  .hero-dots { display:none !important; }
+
+  /* Category tiles: white cards with green theme, horizontal scroll. */
+  .category-strip {
+    display:flex !important; flex-wrap:nowrap !important; gap:9px !important; width:100% !important;
+    overflow-x:auto !important; overflow-y:hidden !important; padding:2px 0 12px !important; margin:0 !important;
+    scrollbar-width:none !important; -webkit-overflow-scrolling:touch !important;
+  }
+  .category-strip::-webkit-scrollbar { display:none !important; }
+  .category-strip::before, .category-strip::after { display:none !important; content:none !important; }
+  .category-strip > button {
+    flex:0 0 78px !important; width:78px !important; min-height:72px !important; padding:7px 4px !important;
+    display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; gap:4px !important;
+    border:1px solid #cfe4d7 !important; border-radius:10px !important; background:#fff !important;
+    color:#183d30 !important; font:600 10px/1.15 system-ui,sans-serif !important; text-align:center !important;
+    box-shadow:0 2px 7px rgba(18,82,52,.05) !important; white-space:normal !important;
+  }
+  .category-strip > button span { display:grid !important; place-items:center !important; width:30px !important; height:30px !important; border-radius:50% !important; background:#e6f8ee !important; font-size:20px !important; }
+
+  .products-section { padding:2px 0 10px !important; }
+  .section-title { display:flex !important; align-items:end !important; justify-content:space-between !important; margin:10px 0 9px !important; }
+  .section-title h2 { margin:0 !important; color:#183d30 !important; font:800 22px/1.1 system-ui,sans-serif !important; letter-spacing:-.3px !important; }
+  .section-title span { color:#65786e !important; font:500 11px system-ui,sans-serif !important; }
+
+  /* Compact 2-column product cards like the reference. */
+  .product-grid { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px !important; }
+  .product-card { min-width:0 !important; overflow:hidden !important; border:1px solid #d7ebe0 !important; border-radius:15px !important; background:#fff !important; box-shadow:0 3px 10px rgba(18,82,52,.06) !important; }
+  .product-card > img { display:block !important; width:100% !important; height:180px !important; aspect-ratio:1/1 !important; object-fit:cover !important; background:#eef5f1 !important; }
+  .product-info { display:block !important; padding:9px 9px 10px !important; }
+  .product-info small { display:block !important; margin:0 0 3px !important; color:#60756a !important; font-size:10px !important; }
+  .product-info h3 { margin:0 0 7px !important; color:#183d30 !important; font:800 12px/1.25 system-ui,sans-serif !important; min-height:30px !important; }
+  .product-info > div:nth-of-type(1) { display:flex !important; align-items:baseline !important; gap:5px !important; white-space:nowrap !important; }
+  .product-info > div:nth-of-type(1) b { color:#183d30 !important; font:800 15px system-ui,sans-serif !important; }
+  .product-info > div:nth-of-type(1) del { color:#65756d !important; font-size:10px !important; }
+  .rating { margin:4px 0 7px !important; color:#e6a600 !important; font-size:10px !important; }
+  .product-info > button { width:100% !important; height:34px !important; border:0 !important; border-radius:8px !important; background:#078f57 !important; color:#fff !important; font:800 11px system-ui,sans-serif !important; }
+
+  /* Fixed bottom navigation: Home / Orders / Cart / Account, same functions preserved. */
+  .bottom-nav {
+    position:fixed !important; left:0 !important; right:0 !important; bottom:0 !important; z-index:1000 !important;
+    height:64px !important; display:grid !important; grid-template-columns:repeat(4,1fr) !important;
+    padding:4px 6px env(safe-area-inset-bottom) !important; box-sizing:content-box !important;
+    border-top:1px solid #dbe9e1 !important; background:rgba(255,255,255,.98) !important;
+    box-shadow:0 -4px 16px rgba(18,82,52,.08) !important; backdrop-filter:blur(8px) !important;
+  }
+  .bottom-nav button { border:0 !important; background:transparent !important; color:#6d7e75 !important; font:600 10px system-ui,sans-serif !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; gap:3px !important; padding:0 !important; }
+  .bottom-nav button span { font-size:11px !important; }
+  .bottom-nav button:first-child { color:#087a49 !important; }
+
+  /* Fix broken product image placeholder visually without changing product logic. */
+  .product-card img { object-position:center !important; }
+}
+@media (max-width:430px) {
+  .header { padding:9px 10px 11px !important; }
+  .header .header-topline { gap:6px !important; }
+  .header .brand { font-size:18px !important; }
+  .header .search-box { height:40px !important; border-radius:13px !important; }
+  .header .search-action { flex-basis:31px !important; width:31px !important; height:31px !important; border-radius:9px !important; }
+  .header .cart-head { flex-basis:39px !important; width:39px !important; height:40px !important; border-radius:11px !important; }
+  .header .filter-row { gap:5px !important; }
+  .header .filter-row > button, .header .filter-row > select { height:38px !important; font-size:10px !important; border-radius:10px !important; }
+  main { padding:0 8px !important; }
+  .hero-swipe, main > .hero-banner { margin-top:8px !important; }
+  .hero-swipe > .hero-banner, main > .hero-banner { min-height:150px !important; height:150px !important; padding:18px 42% 16px 16px !important; }
+  .hero-banner h1 { font-size:19px !important; }
+  .hero-banner:after { width:92px !important; height:92px !important; font-size:42px !important; top:25px !important; }
+  .hero-banner > button { left:16px !important; bottom:13px !important; font-size:9px !important; }
+  .category-strip > button { flex-basis:75px !important; width:75px !important; min-height:70px !important; font-size:9px !important; }
+  .product-grid { gap:8px !important; }
+  .product-card > img { height:155px !important; }
+  .product-info { padding:8px !important; }
+  .product-info h3 { font-size:11px !important; min-height:28px !important; }
+  .product-info > div:nth-of-type(1) b { font-size:14px !important; }
+  .product-info > button { height:32px !important; font-size:10px !important; }
+}
