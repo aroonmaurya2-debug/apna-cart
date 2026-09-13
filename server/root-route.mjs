@@ -1,6 +1,10 @@
 import path from 'node:path'
 import express from 'express'
-import { app } from './server.mjs'
+
+// Map the Render RESEND_API_KEY into the existing Nodemailer SMTP configuration
+// before server.mjs is evaluated.
+await import('./resend-smtp.mjs')
+const { app } = await import('./server.mjs')
 
 // Prevent the browser from reusing an old HTML/JS bundle after frontend fixes.
 app.use((_request, response, next) => {
