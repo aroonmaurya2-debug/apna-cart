@@ -2,6 +2,26 @@ export async function load(url, context, defaultLoad) {
   const result = await defaultLoad(url, context, defaultLoad)
   if (!url.endsWith('/server/server.mjs')) return result
 
+  // Replace the SMTP-only email sender with Resend's HTTPS API.
+  // This avoids SMTP connection timeouts on hosted environments.
+  const resendEmailSource = `const sendEmail = async (to, subject, text) => {
+  if (!process.env.RESEND_API_KEY) {
+    console.log(\`[email not configured] \${to}\\n\${subject}\\n\${text}\`)
+    return false
+  }
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: \`Bearer \${process.env.RESEND_API_KEY}\`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: process.env.RESEND_FROM || process.env.SMTP_FROM || 'onboarding@resend.dev', to: [to], subject, text })
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload?.message || \`Resend email failed: \${response.status}\`)
+  return Boolean(payload?.id)
+}`
+
+  const smtpEmailSource = `const sendEmail = async (to, subject, text) => { const transporter = getTransporter(); if (!transporter) { console.log(\`[email not configured] \${to}\\n\${subject}\\n\${text}\`); return false }; await transporter.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text }); return true }`
+  const patchedSource = result.source.replace(smtpEmailSource, resendEmailSource)
+
   const injected = [
     '',
     '// Firebase auth bridges injected at runtime.',
@@ -95,7 +115,7 @@ export async function load(url, context, defaultLoad) {
     '  } catch (error) { console.error("Refund request failed:", error); return response.status(500).json({ message: "Refund request could not be created." }) }',
     '})',
     '',
-    '// Seller inventory controls. Stock is stored on each product document and can be updated without changing the existing seller/product flow.',
+    '// Seller inventory controls.',
     "app.get('/api/inventory', async (request, response) => {",
     '  const session = getSession(request); if (!session || !productsCollection || !sellersCollection) return response.status(401).json({ message: "Please login again." })',
     '  try {',
@@ -125,5 +145,5 @@ export async function load(url, context, defaultLoad) {
     ''
   ].join('\n')
 
-  return { ...result, source: `${result.source}${injected}`, shortCircuit: true }
+  return { ...result, source: `${patchedSource}${injected}`, shortCircuit: true }
 }
