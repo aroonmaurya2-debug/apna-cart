@@ -10,7 +10,8 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "node scripts/ensure-seller-hub-banner.mjs"
   },
   "dependencies": {
     "@types/node": "^24.13.3",
