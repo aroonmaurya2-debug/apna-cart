@@ -1,40 +1,13 @@
 // Email helper for Apna Cart.
 // Secrets must stay in Render Environment Variables only.
-
-import nodemailer from 'nodemailer'
+//
+// IMPORTANT: Render Free web services block outbound SMTP ports 25, 465 and 587.
+// Therefore OTP email delivery uses the Resend HTTPS API only. Do not use
+// Gmail/SMTP from this service.
 
 const RESEND_API = 'https://api.resend.com/emails'
 
-const hasSmtpConfig = () => Boolean(
-  process.env.SMTP_USER &&
-  process.env.SMTP_PASS,
-)
-
-export const isResendConfigured = () => Boolean(
-  process.env.RESEND_API_KEY || hasSmtpConfig(),
-)
-
-const sendWithSmtp = async ({ to, subject, text, html }) => {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: String(process.env.SMTP_SECURE || 'true').toLowerCase() === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  })
-
-  const info = await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to,
-    subject,
-    text,
-    ...(html ? { html } : {}),
-  })
-
-  return Boolean(info?.messageId)
-}
+export const isResendConfigured = () => Boolean(process.env.RESEND_API_KEY)
 
 const sendWithResend = async ({ to, subject, text, html }) => {
   const apiKey = process.env.RESEND_API_KEY
@@ -64,8 +37,6 @@ const sendWithResend = async ({ to, subject, text, html }) => {
 }
 
 export const sendResendEmail = async ({ to, subject, text, html }) => {
-  // Prefer SMTP when configured. This prevents an old/invalid Resend key from
-  // breaking OTP delivery when a working SMTP account is available.
-  if (hasSmtpConfig()) return sendWithSmtp({ to, subject, text, html })
+  // Always use the HTTPS API. This bypasses Render's SMTP port restriction.
   return sendWithResend({ to, subject, text, html })
 }
