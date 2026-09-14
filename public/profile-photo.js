@@ -4,16 +4,10 @@
   const PANEL_ID = 'apna-cart-profile-photo-panel'
 
   function loggedIn() {
-    try { return !!localStorage.getItem('apna-cart-token') || !!localStorage.getItem('apna-cart-user') } catch { return false }
+    try { return !!localStorage.getItem(KEY) || !!localStorage.getItem('apna-cart-token') || !!localStorage.getItem('apna-cart-user') } catch { return false }
   }
-
-  function getPhoto() {
-    try { return localStorage.getItem(KEY) || '' } catch { return '' }
-  }
-
-  function savePhoto(data) {
-    try { localStorage.setItem(KEY, data) } catch { alert('Photo save nahi ho payi. Thodi chhoti photo select karein.') }
-  }
+  function getPhoto() { try { return localStorage.getItem(KEY) || '' } catch { return '' } }
+  function savePhoto(data) { try { localStorage.setItem(KEY, data) } catch { alert('Photo save nahi ho payi. Thodi chhoti photo select karein.') } }
 
   function addStyles() {
     if (document.getElementById(STYLE_ID)) return
@@ -37,13 +31,7 @@
   }
 
   function openPanel() {
-    if (!loggedIn()) {
-      const candidates = [...document.querySelectorAll('button, a')]
-      const login = candidates.find(el => /login|sign in|account/i.test((el.textContent || '').trim()))
-      if (login) { login.click(); return }
-      alert('Pehle login karein, phir profile photo laga sakte hain.')
-      return
-    }
+    if (!loggedIn()) { alert('Pehle login karein, phir profile photo laga sakte hain.'); return }
     document.getElementById(PANEL_ID)?.remove()
     const panel = document.createElement('div')
     panel.id = PANEL_ID
@@ -65,7 +53,6 @@
       reader.readAsDataURL(file)
     })
   }
-
   window.openProfilePhotoPanel = openPanel
 
   function addReferralStyles() {
@@ -73,7 +60,7 @@
     const s = document.createElement('style')
     s.id = 'ac-referral-style'
     s.textContent = `
-      #ac-referral-page{position:fixed;inset:0;z-index:21000;background:#f5fbf8;color:#10251e;font-family:Arial,sans-serif;overflow:auto}
+      #ac-referral-page{position:fixed;inset:0;z-index:25000;background:#f5fbf8;color:#10251e;font-family:Arial,sans-serif;overflow:auto}
       #ac-referral-page *{box-sizing:border-box}
       #ac-referral-page .rp-top{background:linear-gradient(145deg,#075c3f,#078a58);color:#fff;padding:16px 18px 30px;border-radius:0 0 30px 30px}
       #ac-referral-page .rp-nav{display:flex;align-items:center;gap:12px;height:52px}.rp-back{border:0;background:transparent;color:#fff;font-size:34px;width:38px}.rp-title{font-size:22px;font-weight:900;flex:1}.rp-share{border:0;background:#ffffff22;color:#fff;border-radius:20px;padding:9px 13px;font-weight:800}
@@ -86,9 +73,10 @@
   }
 
   function openReferral() {
-    if (!loggedIn()) { const login = [...document.querySelectorAll('button,a')].find(el => /login|sign in|account/i.test((el.textContent||'').trim())); if (login) login.click(); return }
+    if (!loggedIn()) { alert('Pehle login karein.'); return }
     addReferralStyles()
-    document.getElementById('ac-referral-page')?.remove()
+    document.querySelectorAll('.sheet-bg,.sheet').forEach(el => el.closest('.sheet-bg')?.remove())
+    document.querySelectorAll('[id="ac-referral-page"]').forEach(el => el.remove())
     const user = (() => { try { return JSON.parse(localStorage.getItem('apna-cart-user') || '{}') || {} } catch { return {} } })()
     const code = String(user.referralCode || user.contact || user.name || 'APNACART').replace(/\s+/g,'').toUpperCase().slice(0,12)
     const page = document.createElement('div'); page.id='ac-referral-page'
@@ -100,6 +88,7 @@
     page.querySelector('.rp-share').onclick=share
     page.querySelector('.rp-invite').onclick=share
   }
+  window.openReferralPage = openReferral
 
   function ensureReferralTrigger() {
     if (document.querySelector('.referral-fab')) return
@@ -109,9 +98,15 @@
   function watch() {
     addStyles()
     ensureReferralTrigger()
+    document.addEventListener('click', e => {
+      const referral = e.target?.closest?.('[data-a="referral"]')
+      if (!referral) return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      openReferral()
+    }, true)
     window.addEventListener('apna-cart-profile-photo-updated', () => window.dispatchEvent(new Event('apna-cart-profile-updated')))
   }
-
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch)
   else watch()
 })()
