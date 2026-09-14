@@ -1,6 +1,7 @@
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './AppFixed.tsx'
+import SellerDashboard from './SellerDashboard.tsx'
 import './index.css'
 import './home-fix.css'
 import './home-mobile.css'
@@ -17,7 +18,6 @@ import './product-detail-polish.css'
 import './cart-checkout-polish.css'
 
 type State = { error: unknown }
-
 class StartupBoundary extends Component<{ children: ReactNode }, State> {
   state: State = { error: null }
   static getDerivedStateFromError(error: unknown): State { return { error } }
@@ -30,14 +30,7 @@ class StartupBoundary extends Component<{ children: ReactNode }, State> {
     return this.props.children
   }
 }
-
 const root = document.getElementById('root')
 if (!root) throw new Error('Apna Cart root element missing')
-
-createRoot(root).render(
-  <StrictMode>
-    <StartupBoundary>
-      <App />
-    </StartupBoundary>
-  </StrictMode>,
-)
+const isSellerPage = window.location.pathname.replace(/\/+$/, '') === '/seller'
+createRoot(root).render(<StrictMode><StartupBoundary>{isSellerPage ? <SellerDashboard /> : <App />}</StartupBoundary></StrictMode>)
