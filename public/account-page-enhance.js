@@ -95,7 +95,8 @@
       };
       modal.querySelector('#pf-photo').onclick = () => {
         modal.remove();
-        document.querySelector('#apna-profile-avatar')?.click();
+        if (typeof window.openProfilePhotoPanel === 'function') window.openProfilePhotoPanel();
+        else alert('Profile photo option load ho raha hai. Please ek baar refresh karein.');
       };
     });
   }
