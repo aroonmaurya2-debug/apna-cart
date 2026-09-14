@@ -20,9 +20,6 @@
     const style = document.createElement('style')
     style.id = STYLE_ID
     style.textContent = `
-      #apna-profile-avatar { position:fixed; top:72px; left:12px; z-index:9998; width:42px; height:42px; border-radius:50%; border:2px solid #08794d; background:#e9f7f1; overflow:hidden; padding:0; box-shadow:0 3px 12px rgba(0,0,0,.16); display:flex; align-items:center; justify-content:center; cursor:pointer; }
-      #apna-profile-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
-      #apna-profile-avatar span { font-size:20px; color:#08794d; font-weight:800; }
       #${PANEL_ID} { position:fixed; inset:0; z-index:10001; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; justify-content:center; }
       #${PANEL_ID} .profile-photo-sheet { width:min(100%,520px); background:#fff; border-radius:24px 24px 0 0; padding:24px 20px 30px; box-shadow:0 -8px 30px rgba(0,0,0,.2); text-align:center; font-family:Arial,sans-serif; }
       #${PANEL_ID} .profile-photo-preview { width:104px; height:104px; margin:4px auto 14px; border-radius:50%; overflow:hidden; border:3px solid #0b8a59; background:#e9f7f1; display:flex; align-items:center; justify-content:center; }
@@ -35,7 +32,6 @@
       #${PANEL_ID} .choose { border:0; background:#078a58; color:white; }
       #${PANEL_ID} .remove { border:1px solid #0b8a59; background:white; color:#08794d; }
       #${PANEL_ID} .close { width:100%; margin-top:10px; border:0; background:#f1f4f3; color:#35534a; }
-      @media(max-width:430px){ #apna-profile-avatar{top:67px;left:9px;width:38px;height:38px} #${PANEL_ID} .profile-photo-sheet{padding-bottom:24px} }
     `
     document.head.appendChild(style)
   }
@@ -56,7 +52,7 @@
     document.body.appendChild(panel)
     const input = panel.querySelector('.profile-photo-input')
     panel.querySelector('.choose').addEventListener('click', () => input.click())
-    panel.querySelector('.remove').addEventListener('click', () => { try { localStorage.removeItem(KEY) } catch {} panel.remove(); renderAvatar() })
+    panel.querySelector('.remove').addEventListener('click', () => { try { localStorage.removeItem(KEY) } catch {} panel.remove(); window.dispatchEvent(new Event('apna-cart-profile-photo-updated')) })
     panel.querySelector('.close').addEventListener('click', () => panel.remove())
     panel.addEventListener('click', e => { if (e.target === panel) panel.remove() })
     input.addEventListener('change', () => {
@@ -65,33 +61,18 @@
       if (!file.type.startsWith('image/')) return alert('Sirf image select karein.')
       if (file.size > 5 * 1024 * 1024) return alert('Photo 5 MB se chhoti honi chahiye.')
       const reader = new FileReader()
-      reader.onload = () => { savePhoto(String(reader.result)); panel.remove(); renderAvatar() }
+      reader.onload = () => { savePhoto(String(reader.result)); panel.remove(); window.dispatchEvent(new Event('apna-cart-profile-photo-updated')) }
       reader.readAsDataURL(file)
     })
   }
 
-  function renderAvatar() {
-    if (!loggedIn()) { document.getElementById('apna-profile-avatar')?.remove(); return }
-    addStyles()
-    let avatar = document.getElementById('apna-profile-avatar')
-    if (!avatar) {
-      avatar = document.createElement('button')
-      avatar.id = 'apna-profile-avatar'
-      avatar.type = 'button'
-      avatar.title = 'Profile Photo'
-      avatar.setAttribute('aria-label', 'Set profile photo')
-      avatar.addEventListener('click', openPanel)
-      document.body.appendChild(avatar)
-    }
-    const photo = getPhoto()
-    avatar.innerHTML = photo ? `<img src="${photo}" alt="Profile">` : '<span>👤</span>'
-  }
+  // The account/profile icon in the top header is the single profile entry point.
+  // Keep photo editing available to the account screen without adding another floating icon.
+  window.openProfilePhotoPanel = openPanel
 
   function watch() {
-    renderAvatar()
-    let timer = 0
-    new MutationObserver(() => { clearTimeout(timer); timer = window.setTimeout(renderAvatar, 250) }).observe(document.body, { childList:true, subtree:true })
-    window.addEventListener('storage', renderAvatar)
+    addStyles()
+    window.addEventListener('apna-cart-profile-photo-updated', () => window.dispatchEvent(new Event('apna-cart-profile-updated')))
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch)
