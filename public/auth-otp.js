@@ -1,6 +1,10 @@
 (function () {
   'use strict';
-  var API='/api';
+  var API=(function(){
+    var host=window.location.hostname||'';
+    if(host.indexOf('netlify.app')!==-1){return 'https://apna-cart-2rcq.onrender.com/api';}
+    return '/api';
+  })();
   var busy=false;
   var mode='register';
 
@@ -91,7 +95,7 @@
     }
     var contact=input(box,'Email address','email');
     contact.autocomplete='email';
-    var saved='';try{var u=JSON.parse(localStorage.getItem('apna-cart-user')||'{}');saved=u&&u.contact||'';if(!name&&u&&u.name){} }catch(_){saved=''}
+    var saved='';try{var u=JSON.parse(localStorage.getItem('apna-cart-user')||'{}');saved=u&&u.contact||'';}catch(_){saved=''}
     if(saved)contact.value=saved;
     var button=document.createElement('button');button.className='otp-send';button.type='button';button.textContent=mode==='register'?'Create Account with Email OTP':'Login with Email OTP';box.appendChild(button);
     button.onclick=function(){
