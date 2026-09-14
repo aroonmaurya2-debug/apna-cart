@@ -42,8 +42,19 @@
     const page = document.createElement('div'); page.id = 'ac-orders-page'; page.innerHTML = `<div class="ac-orders-top"><button class="ac-orders-back">‹</button><h1>My Orders</h1><span class="ac-orders-count">Loading…</span></div><div class="ac-orders-body"><div class="ac-empty"><div class="ac-empty-icon">⏳</div><h2>Loading orders…</h2><p>Please wait.</p></div></div>`
     document.body.appendChild(page); page.querySelector('.ac-orders-back').onclick = () => page.remove(); render(await getOrders())
   }
+  const isOrdersTarget = (target) => {
+    if (!target) return false
+    if (target.closest?.('[data-a="orders"]')) return true
+    const nav = target.closest?.('.bottom-nav, nav, [class*="bottom-nav"]')
+    if (!nav) return false
+    const item = target.closest?.('button, a, [role="button"]')
+    if (!item) return false
+    const text = `${item.textContent || ''} ${item.getAttribute?.('aria-label') || ''} ${item.getAttribute?.('title') || ''}`.toLowerCase().replace(/\s+/g, ' ').trim()
+    return /\bmy orders\b|\border(?:s)?\b/.test(text)
+  }
   document.addEventListener('click', (e) => {
-    const target = e.target?.closest?.('[data-a="orders"]'); if (!target) return
+    const target = e.target?.closest?.('button, a, [role="button"], [data-a="orders"]') || e.target
+    if (!isOrdersTarget(target)) return
     e.preventDefault(); e.stopImmediatePropagation(); open()
   }, true)
   window.apnaCartOpenOrders = open
