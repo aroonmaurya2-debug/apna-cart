@@ -8,6 +8,19 @@
   var busy=false;
   var mode='register';
 
+  function isLoggedIn(){
+    return Boolean(localStorage.getItem('apna-cart-token') || localStorage.getItem('apna-cart-auth-token')) && Boolean(localStorage.getItem('apna-cart-user'));
+  }
+
+  function openAccountPage(){
+    localStorage.setItem('apna-cart-open-account','1');
+    if(typeof window.apnaCartOpenAccount==='function'){
+      window.apnaCartOpenAccount();
+      return true;
+    }
+    return false;
+  }
+
   function styles(){
     if(document.getElementById('auth-otp-style')) return;
     var s=document.createElement('style'); s.id='auth-otp-style';
@@ -66,8 +79,8 @@
           user.registeredAt=oldUser.registeredAt||new Date().toISOString();
           localStorage.setItem('apna-cart-user',JSON.stringify(user));
           localStorage.removeItem('apna-cart-login-in-progress');
-          localStorage.removeItem('apna-cart-open-account');
-          location.reload();
+          localStorage.setItem('apna-cart-open-account','1');
+          if(!openAccountPage()) location.reload();
         });})
         .catch(function(e){msg(box,e.message||'OTP verify nahi hua.',true);verify.disabled=false})
         .finally(function(){busy=false});
@@ -113,10 +126,10 @@
     var old=document.querySelector('.login-modal');if(old&&old.parentNode)old.parentNode.removeChild(old);
     document.body.style.overflow='';
     localStorage.removeItem('apna-cart-login-in-progress');
-    localStorage.removeItem('apna-cart-open-account');
   }
 
   function openAccountLogin(){
+    if(isLoggedIn() && openAccountPage()) return;
     styles();
     if(document.querySelector('.account-login-overlay'))return;
     document.body.style.overflow='hidden';
@@ -125,7 +138,7 @@
   }
 
   function wireExisting(){var box=document.querySelector('.login-modal');if(!box)return;if(box.getAttribute('data-otp-wired')==='1')return;box.setAttribute('data-otp-wired','1');renderLogin(box)}
-  function accountClick(e){var btn=e.target.closest&&e.target.closest('.bottom-nav button');if(!btn)return;var text=(btn.textContent||'').toLowerCase();if(text.indexOf('account')===-1&&text.indexOf('profile')===-1)return;if(localStorage.getItem('apna-cart-user'))return;e.preventDefault();e.stopImmediatePropagation();openAccountLogin()}
+  function accountClick(e){var btn=e.target.closest&&e.target.closest('.bottom-nav button');if(!btn)return;var text=(btn.textContent||'').toLowerCase();if(text.indexOf('account')===-1&&text.indexOf('profile')===-1)return;e.preventDefault();e.stopImmediatePropagation();if(isLoggedIn()){openAccountPage();}else{openAccountLogin();}}
   function start(){styles();wireExisting();document.addEventListener('click',accountClick,true);var root=document.getElementById('root');if(root)new MutationObserver(function(){wireExisting()}).observe(root,{childList:true,subtree:true})}
   window.openAccountLogin=openAccountLogin;window.closeAccountLogin=closeModal;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
