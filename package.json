@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node --watch server/server.mjs",
-    "start": "node server/root-route.mjs",
+    "start": "node server/server.mjs",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
@@ -30,7 +30,7 @@
     "vite": "^8.2.2"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
+    "concurrently": "^9.2.0",
     "oxlint": "^1.79.0"
   }
 }
