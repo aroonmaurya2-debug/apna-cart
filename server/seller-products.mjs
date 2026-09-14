@@ -25,6 +25,66 @@ export const registerSellerProductRoutes = (appOrOptions, maybeOptions) => {
     return { ref, product: snap.data(), sellerId: seller.id }
   }
 
+  // Add a new seller product directly to Firestore. The logged-in seller is
+  // always taken from the session, so a seller cannot create a product for
+  // another seller account.
+  app.post('/api/sellers/products', async (request, response) => {
+    const session = getSession(request)
+    if (!session) return response.status(401).json({ message: 'Login required.' })
+    if (!productsCollection || !sellersCollection) return response.status(503).json({ message: 'Seller catalog is not configured yet.' })
+    try {
+      const seller = await sellerForSession(session)
+      if (!seller) return response.status(403).json({ message: 'Register as a seller first.' })
+      const body = request.body || {}
+      const name = clean(body.name)
+      const category = clean(body.category)
+      const gender = ['Women', 'Men', 'Kids', 'Unisex'].includes(body.gender) ? body.gender : 'Unisex'
+      const price = Number(body.price)
+      const oldPrice = Number(body.oldPrice || price)
+      const stock = Number(body.stock ?? 1)
+      const image = clean(body.image)
+      const description = clean(body.description)
+      const sizes = Array.isArray(body.sizes) ? body.sizes.map(clean).filter(Boolean).slice(0, 20) : []
+      const colors = Array.isArray(body.colors) ? body.colors.map(clean).filter(Boolean).slice(0, 20) : []
+
+      if (!name || !category) return response.status(400).json({ message: 'Product name and category are required.' })
+      if (!Number.isFinite(price) || price <= 0) return response.status(400).json({ message: 'Valid selling price is required.' })
+      if (!Number.isFinite(oldPrice) || oldPrice < price) return response.status(400).json({ message: 'MRP must be greater than or equal to selling price.' })
+      if (!Number.isInteger(stock) || stock < 0) return response.status(400).json({ message: 'Valid stock quantity is required.' })
+      if (!image) return response.status(400).json({ message: 'Product image URL is required.' })
+
+      const productId = `product_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`
+      const discount = `${Math.max(0, Math.round((1 - price / Math.max(oldPrice, 1)) * 100))}% OFF`
+      const product = {
+        id: productId,
+        sellerId: seller.id,
+        sellerName: clean(seller.data.shopName || seller.data.name),
+        name,
+        category,
+        gender,
+        price,
+        oldPrice,
+        image,
+        rating: 0,
+        reviews: 0,
+        discount,
+        description,
+        sizes,
+        colors,
+        stock,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      await productsCollection.doc(productId).set(product)
+      return response.status(201).json({ product })
+    } catch (error) {
+      console.error(error)
+      return response.status(500).json({ message: 'Product could not be added.' })
+    }
+  })
+
   app.get('/api/sellers/products', async (request, response) => {
     const session = getSession(request)
     if (!session) return response.status(401).json({ message: 'Login required.' })
@@ -52,6 +112,8 @@ export const registerSellerProductRoutes = (appOrOptions, maybeOptions) => {
       for (const key of ['image', 'description']) if (body[key] !== undefined) updates[key] = String(body[key] || '').trim()
       if (Array.isArray(body.sizes)) updates.sizes = body.sizes.slice(0, 20)
       if (Array.isArray(body.colors)) updates.colors = body.colors.slice(0, 20)
+      if (body.stock !== undefined) { const stock = Number(body.stock); if (!Number.isInteger(stock) || stock < 0) return response.status(400).json({ message: 'Valid stock quantity is required.' }); updates.stock = stock }
+      if (updates.price !== undefined || updates.oldPrice !== undefined) { const price = Number(updates.price ?? owned.product.price); const old = Number(updates.oldPrice ?? owned.product.oldPrice); updates.discount = `${Math.max(0, Math.round((1 - price / Math.max(old, 1)) * 100))}% OFF` }
       updates.updatedAt = new Date().toISOString()
       await owned.ref.update(updates)
       return response.json({ product: { ...owned.product, ...updates } })
