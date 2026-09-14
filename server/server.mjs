@@ -111,5 +111,4 @@ app.get('/api/orders', async (request, response) => { const session = getSession
 app.get('/api/admin/overview', async (request,response)=>{const session=getSession(request);if(!isOwner(session))return response.status(403).json({message:'Owner access required.'});try{const orders=await readOrders();const totalRevenue=orders.reduce((sum,o)=>sum+Number(o.total||0),0);const commissions=orders.map(o=>calculateCommission(Number(o.total||0)));const commissionTotal=commissions.reduce((sum,c)=>sum+c.commission,0);return response.json({summary:{orders:orders.length,totalRevenue,commissionTotal,netRevenue:Math.round((totalRevenue-commissionTotal)*100)/100}})}catch(error){console.error(error);return response.status(500).json({message:'Admin overview could not be loaded.'})}})
 
 app.use(express.static(path.join(__dirname, '..', 'dist')))
-app.get('*', (_request, response) => response.sendFile(path.join(__dirname, '..', 'dist', 'index.html')))
 app.listen(port, () => console.log(`Apna Cart API listening on ${port}`))
