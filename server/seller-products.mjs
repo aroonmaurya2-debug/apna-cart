@@ -1,4 +1,6 @@
-export const registerSellerProductRoutes = ({ app, getSession, clean, productsCollection, sellersCollection }) => {
+export const registerSellerProductRoutes = (appOrOptions, maybeOptions) => {
+  const options = maybeOptions ? { app: appOrOptions, ...maybeOptions } : appOrOptions
+  const { app, getSession, clean, productsCollection, sellersCollection } = options
   const sellerForSession = async (session) => {
     if (!productsCollection || !sellersCollection) return null
     const snapshot = await sellersCollection.where('email', '==', session.contact).limit(1).get()
