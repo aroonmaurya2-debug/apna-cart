@@ -11,7 +11,14 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-export const firebaseConfigured = Object.values(firebaseConfig).every(Boolean)
+// Owner login only needs the Firebase Auth configuration. Optional services
+// such as Firestore must not be allowed to break Auth initialization.
+export const firebaseConfigured = [
+  firebaseConfig.apiKey,
+  firebaseConfig.authDomain,
+  firebaseConfig.projectId,
+  firebaseConfig.appId,
+].every(Boolean)
 
 let firebaseApp: FirebaseApp | null = null
 let auth: Auth | null = null
@@ -21,13 +28,17 @@ if (firebaseConfigured) {
   try {
     firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
     auth = getAuth(firebaseApp)
-    db = getFirestore(firebaseApp)
   } catch {
-    // Keep the Owner App usable enough to show its login/error screen even
-    // when a deployment contains an invalid or incomplete Firebase config.
     firebaseApp = null
     auth = null
-    db = null
+  }
+
+  if (firebaseApp) {
+    try {
+      db = getFirestore(firebaseApp)
+    } catch {
+      db = null
+    }
   }
 }
 
