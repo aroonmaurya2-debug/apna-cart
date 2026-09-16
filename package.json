@@ -9,7 +9,7 @@
     "start": "node server/start.mjs",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
     "build": "tsc -b && vite build",
-    "build:owner": "tsc -b && vite build --config vite.owner.config.ts",
+    "build:owner": "tsc -b && vite build --config vite.owner.config.ts && node scripts/prepare-owner-build.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "postinstall": "node scripts/ensure-seller-hub-banner.mjs"
@@ -24,7 +24,7 @@
     "express": "^5.1.0",
     "firebase": "^12.2.1",
     "firebase-admin": "^13.5.0",
-    "nodemailer": "^7.0.6",
+    "nodemailer": "^7.0.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
