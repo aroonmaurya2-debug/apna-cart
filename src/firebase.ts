@@ -1,4 +1,4 @@
-import { getApp, getApps, initializeApp } from 'firebase/app'
+import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app'
 import { browserLocalPersistence, getAuth, setPersistence, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 
@@ -12,12 +12,32 @@ const firebaseConfig = {
 }
 
 export const firebaseConfigured = Object.values(firebaseConfig).every(Boolean)
-export const firebaseApp = firebaseConfigured ? (getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)) : null
-export const auth: Auth | null = firebaseApp ? getAuth(firebaseApp) : null
-export const db: Firestore | null = firebaseApp ? getFirestore(firebaseApp) : null
-export const authPersistence = auth ? setPersistence(auth, browserLocalPersistence) : Promise.resolve()
+
+let firebaseApp: FirebaseApp | null = null
+let auth: Auth | null = null
+let db: Firestore | null = null
+
+if (firebaseConfigured) {
+  try {
+    firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+    auth = getAuth(firebaseApp)
+    db = getFirestore(firebaseApp)
+  } catch {
+    // Keep the Owner App usable enough to show its login/error screen even
+    // when a deployment contains an invalid or incomplete Firebase config.
+    firebaseApp = null
+    auth = null
+    db = null
+  }
+}
+
+export { firebaseApp, auth, db }
+
+export const authPersistence = auth
+  ? setPersistence(auth, browserLocalPersistence).catch(() => undefined)
+  : Promise.resolve()
 
 export const requireFirebase = () => {
-  if (!auth || !db) throw new Error('Firebase is not configured. Add the VITE_FIREBASE_* values in Netlify environment variables.')
+  if (!auth || !db) throw new Error('Firebase is not configured correctly in this deployment. Check the VITE_FIREBASE_* values.')
   return { auth, db }
 }
