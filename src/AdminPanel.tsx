@@ -85,14 +85,16 @@ export default function AdminPanel() {
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, 5); if (!files.length) return
-    if (!auth?.currentUser || !storage) { setError('Firebase Storage configured nahi hai. Firebase Console me Storage enable karein.'); return }
+    const currentAuth = auth
+    const currentStorage = storage
+    if (!currentAuth?.currentUser || !currentStorage) { setError('Firebase Storage configured nahi hai. Firebase Console me Storage enable karein.'); return }
     if (files.some(f => !f.type.startsWith('image/'))) { setError('Sirf image files select karein.'); return }
     if (files.some(f => f.size > 8 * 1024 * 1024)) { setError('Har image 8MB se chhoti honi chahiye.'); return }
     setUploadingImages(true); setError('')
     try {
       const uploaded = await Promise.all(files.map(async (file, index) => {
         const blob = await compressImage(file)
-        const imageRef = ref(storage, `products/${auth.currentUser!.uid}/${Date.now()}-${index}.jpg`)
+        const imageRef = ref(currentStorage, `products/${currentAuth.currentUser!.uid}/${Date.now()}-${index}.jpg`)
         await uploadBytes(imageRef, blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000' })
         return getDownloadURL(imageRef)
       }))
