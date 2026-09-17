@@ -4,7 +4,7 @@ import { auth } from './firebase'
 import './admin-panel.css'
 
 type Product={id:number|string;name?:string;price?:number;oldPrice?:number;category?:string;gender?:string;stock?:number;image?:string;description?:string}
-type Order={id?:string|number;total?:number;status?:string;contact?:string;phone?:string;createdAt?:string}
+type Order={id?:string|number;total?:number;status?:string;contact?:string;phone?:string;customerName?:string;createdAt?:string}
 type Seller={id?:string;name?:string;shopName?:string;email?:string;phone?:string;city?:string;state?:string;pincode?:string;status?:string;createdAt?:string}
 type Tab='dashboard'|'products'|'orders'|'customers'|'earnings'|'sellers'
 const API_BASE=import.meta.env.DEV?'http://localhost:10000/api':'https://apna-cart-2rcq.onrender.com/api'
