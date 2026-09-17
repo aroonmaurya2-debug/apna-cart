@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { getAuth } from 'firebase-admin/auth'
 
 const cleanVariants = (value) => Array.isArray(value) ? value.slice(0, 50).map((v, i) => ({ id: String(v?.id || `variant_${i + 1}`), color: String(v?.color || '').trim(), size: String(v?.size || '').trim(), price: Number(v?.price || 0), stock: Number(v?.stock || 0), sku: String(v?.sku || '').trim() })).filter(v => v.color || v.size || v.price || v.stock || v.sku) : []
 const productDetails = (body, current = {}) => ({
@@ -13,10 +14,22 @@ const productDetails = (body, current = {}) => ({
 
 export const registerAdminControlRoutes = (app, options = {}) => {
   const { productsCollection, sellersCollection, getSession, isOwner, readOrders, calculateCommission } = options
-  const ownerOnly = (request, response) => { const session = getSession(request); if (!isOwner(session)) { response.status(403).json({ message: 'Owner access required.' }); return null } return session }
+  const resolveSession = async (request) => {
+    const session = getSession(request)
+    if (session) return session
+    const token = request.headers.authorization?.replace('Bearer ', '').trim()
+    if (!token) return null
+    try {
+      const decoded = await getAuth().verifyIdToken(token)
+      return { name: String(decoded.name || decoded.email || ''), contact: String(decoded.email || '').toLowerCase(), createdAt: Date.now(), firebaseUid: decoded.uid }
+    } catch {
+      return null
+    }
+  }
+  const ownerOnly = async (request, response) => { const session = await resolveSession(request); if (!isOwner(session)) { response.status(403).json({ message: 'Owner access required.' }); return null } return session }
 
   app.post('/api/products', async (request, response) => {
-    if (!ownerOnly(request, response)) return
+    if (!await ownerOnly(request, response)) return
     if (!productsCollection) return response.status(503).json({ message: 'Product database is not configured.' })
     try {
       const body = request.body || {}, name = String(body.name || '').trim(), category = String(body.category || 'All Categories').trim(), gender = ['Women','Men','Kids','Unisex'].includes(body.gender) ? body.gender : 'Unisex', price = Number(body.price), oldPrice = Number(body.oldPrice || price), stock = Number(body.stock ?? 0)
@@ -31,7 +44,7 @@ export const registerAdminControlRoutes = (app, options = {}) => {
   })
 
   app.put('/api/products/:id', async (request, response) => {
-    if (!ownerOnly(request, response)) return
+    if (!await ownerOnly(request, response)) return
     if (!productsCollection) return response.status(503).json({ error: 'Product database is not configured.' })
     try {
       const ref = productsCollection.doc(String(request.params.id)), snap = await ref.get()
@@ -44,9 +57,9 @@ export const registerAdminControlRoutes = (app, options = {}) => {
     } catch (error) { console.error('Owner product update failed:', error); return response.status(500).json({ error: 'Product could not be updated.' }) }
   })
 
-  app.delete('/api/products/:id', async (request, response, next) => { const session = getSession(request); if (!isOwner(session)) return next(); if (!productsCollection) return response.status(503).json({ error: 'Product database is not configured.' }); try { const ref = productsCollection.doc(String(request.params.id)), snap = await ref.get(); if (!snap.exists) return response.status(404).json({ error: 'Product not found.' }); await ref.set({ status: 'deleted', deletedAt: new Date().toISOString() }, { merge: true }); return response.json({ ok: true, id: request.params.id }) } catch (error) { console.error('Owner product delete failed:', error); return response.status(500).json({ error: 'Product could not be deleted.' }) } })
+  app.delete('/api/products/:id', async (request, response) => { if (!await ownerOnly(request, response)) return; if (!productsCollection) return response.status(503).json({ error: 'Product database is not configured.' }); try { const ref = productsCollection.doc(String(request.params.id)), snap = await ref.get(); if (!snap.exists) return response.status(404).json({ error: 'Product not found.' }); await ref.set({ status: 'deleted', deletedAt: new Date().toISOString() }, { merge: true }); return response.json({ ok: true, id: request.params.id }) } catch (error) { console.error('Owner product delete failed:', error); return response.status(500).json({ error: 'Product could not be deleted.' }) } })
 
-  app.get('/api/admin/customers', async (request, response) => { if (!ownerOnly(request, response)) return; try { const orders = await readOrders(), map = new Map(); for (const order of orders) { const contact = String(order.customerContact || order.contact || order.phone || 'Unknown'), old = map.get(contact) || { contact, name: order.customerName || '', orders: 0, spent: 0, lastOrder: null }; old.orders += 1; old.spent += Number(order.total || 0); old.name = old.name || order.customerName || ''; if (!old.lastOrder || String(order.createdAt || '') > String(old.lastOrder)) old.lastOrder = order.createdAt || null; map.set(contact, old) } return response.json({ customers: [...map.values()].sort((a,b) => b.spent - a.spent) }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Customers could not be loaded.' }) } })
+  app.get('/api/admin/customers', async (request, response) => { if (!await ownerOnly(request, response)) return; try { const orders = await readOrders(), map = new Map(); for (const order of orders) { const contact = String(order.customerContact || order.contact || order.phone || 'Unknown'), old = map.get(contact) || { contact, name: order.customerName || '', orders: 0, spent: 0, lastOrder: null }; old.orders += 1; old.spent += Number(order.total || 0); old.name = old.name || order.customerName || ''; if (!old.lastOrder || String(order.createdAt || '') > String(old.lastOrder)) old.lastOrder = order.createdAt || null; map.set(contact, old) } return response.json({ customers: [...map.values()].sort((a,b) => b.spent - a.spent) }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Customers could not be loaded.' }) } })
 
-  app.get('/api/admin/controls', async (request, response) => { if (!ownerOnly(request, response)) return; try { const orders = await readOrders(), products = productsCollection ? (await productsCollection.get()).docs.map(doc => doc.data()) : [], sellers = sellersCollection ? (await sellersCollection.get()).docs.map(doc => doc.data()) : [], revenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0), commissionRate = 10, commission = calculateCommission ? orders.reduce((sum, o) => sum + calculateCommission(Number(o.total || 0), commissionRate).commission, 0) : revenue * commissionRate / 100; return response.json({ controls: { products: products.length, activeProducts: products.filter(p => p.status === 'active').length, orders: orders.length, sellers: sellers.length, customers: new Set(orders.map(o => o.customerContact || o.contact || o.phone)).size, revenue, commission, commissionRate } }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Control data could not be loaded.' }) } })
+  app.get('/api/admin/controls', async (request, response) => { if (!await ownerOnly(request, response)) return; try { const orders = await readOrders(), products = productsCollection ? (await productsCollection.get()).docs.map(doc => doc.data()) : [], sellers = sellersCollection ? (await sellersCollection.get()).docs.map(doc => doc.data()) : [], revenue = orders.reduce((sum, o) => sum + Number(o.total || 0), 0), commissionRate = 10, commission = calculateCommission ? orders.reduce((sum, o) => sum + calculateCommission(Number(o.total || 0), commissionRate).commission, 0) : revenue * commissionRate / 100; return response.json({ controls: { products: products.length, activeProducts: products.filter(p => p.status === 'active').length, orders: orders.length, sellers: sellers.length, customers: new Set(orders.map(o => o.customerContact || o.contact || o.phone)).size, revenue, commission, commissionRate } }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Control data could not be loaded.' }) } })
 }
