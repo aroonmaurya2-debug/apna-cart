@@ -37,5 +37,4 @@ if (!root) throw new Error('Apna Cart root element missing')
 const path = window.location.pathname.replace(/\/+$/, '')
 const isSellerPage = path === '/seller'
 const isAdminPage = path === '/admin'
-const isCustomerPage = !isSellerPage && !isAdminPage
 createRoot(root).render(<StrictMode><StartupBoundary>{isAdminPage ? <AdminPanel /> : isSellerPage ? <SellerDashboard /> : <><App /><CustomerFeatures /></>}</StartupBoundary></StrictMode>)
