@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app'
 import { browserLocalPersistence, getAuth, setPersistence, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getStorage, type FirebaseStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,8 +12,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-// Owner login only needs the Firebase Auth configuration. Optional services
-// such as Firestore must not be allowed to break Auth initialization.
 export const firebaseConfigured = [
   firebaseConfig.apiKey,
   firebaseConfig.authDomain,
@@ -23,6 +22,7 @@ export const firebaseConfigured = [
 let firebaseApp: FirebaseApp | null = null
 let auth: Auth | null = null
 let db: Firestore | null = null
+let storage: FirebaseStorage | null = null
 
 if (firebaseConfigured) {
   try {
@@ -39,10 +39,15 @@ if (firebaseConfigured) {
     } catch {
       db = null
     }
+    try {
+      storage = getStorage(firebaseApp)
+    } catch {
+      storage = null
+    }
   }
 }
 
-export { firebaseApp, auth, db }
+export { firebaseApp, auth, db, storage }
 
 export const authPersistence = auth
   ? setPersistence(auth, browserLocalPersistence).catch(() => undefined)
