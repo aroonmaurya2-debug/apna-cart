@@ -21,6 +21,9 @@
   document.addEventListener('click', (e) => {
     const button = e.target?.closest?.('.ac-buy');
     if (!button) return;
+    // Product-detail-enhance.js handles Buy Now inside the product modal.
+    // This global handler is only for Buy Now buttons attached to product cards.
+    if (button.closest?.('.product-modal,.product-detail-overlay,[role="dialog"]')) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     openCheckout(button);
