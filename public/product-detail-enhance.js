@@ -26,6 +26,8 @@
     addStyle();
     const box=document.createElement('div');box.className='ac-detail-extra';
     box.innerHTML=`<div class="ac-detail-label">Size</div><div class="ac-size-row"><button class="ac-size">S</button><button class="ac-size active">M</button><button class="ac-size">L</button><button class="ac-size">XL</button><button class="ac-size">XXL</button></div><div class="ac-detail-label">Quantity</div><div class="ac-qty"><button data-q="-">−</button><span>1</span><button data-q="+">+</button></div><div class="ac-actions"><button class="ac-add">🛒 &nbsp;Add to Cart</button><button class="ac-buy">⚡ &nbsp;Buy Now</button></div><div class="ac-benefits"><div class="ac-benefit"><b>🚚 Free Delivery</b><span>On orders above ₹499</span></div><div class="ac-benefit"><b>🛡 Secure Payment</b><span>100% secure</span></div><div class="ac-benefit"><b>↩ Easy Returns</b><span>7 days return policy</span></div></div>`;
+    // Hide the React/native action buttons so only this enhanced action row is visible.
+    root.querySelectorAll(':scope > button:not(.close)').forEach((button)=>{button.style.display='none'});
     nativeAdd.style.display='none';
     const anchor=nativeAdd.parentElement||root;anchor.appendChild(box);
     const qty=box.querySelector('.ac-qty span');let count=1;
