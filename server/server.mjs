@@ -10,6 +10,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { sendResendEmail } from './resend-email.mjs'
 import { registerSellerProductRoutes } from './seller-products.mjs'
 import { registerAdminControlRoutes } from './admin-controls.mjs'
+import { registerOrderControlRoutes } from './order-controls.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const dataDirectory = path.join(__dirname, 'data')
@@ -106,6 +107,7 @@ app.post('/api/sellers', async (request,response)=>{ const session=getSession(re
 
 registerAdminControlRoutes(app, { productsCollection, sellersCollection, getSession, isOwner, readOrders, calculateCommission })
 registerSellerProductRoutes(app, { productsCollection, sellersCollection, getSession, isOwner })
+registerOrderControlRoutes(app, { ordersCollection, getSession, isOwner, readOrders, writeOrders })
 
 app.post('/api/orders', async (request, response) => { const session = getSession(request); if (!session) return response.status(401).json({ message: 'Please login first.' }); const body = request.body || {}; const order = { id: `order_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`, customerName: session.name, customerContact: session.contact, items: Array.isArray(body.items) ? body.items : [], total: Number(body.total || 0), address: clean(body.address), city: clean(body.city), pincode: clean(body.pincode), phone: clean(body.phone), paymentMethod: clean(body.paymentMethod) || 'Cash on Delivery', status: 'placed', createdAt: new Date().toISOString() }; if (!order.items.length || !order.total || !order.address) return response.status(400).json({ message: 'Order items, total and address are required.' }); try { if (ordersCollection) await ordersCollection.doc(order.id).set(order); else { const orders = await readOrders(); orders.unshift(order); await writeOrders(orders) } if (ownerEmail) await sendEmail(ownerEmail, `New Apna Cart Order ${order.id}`, `New order placed by ${order.customerName} (${order.customerContact}). Total: ₹${order.total}. Delivery: ${order.address}, ${order.city} - ${order.pincode}.`); return response.status(201).json({ order }) } catch (error) { console.error('Order create failed:', error); return response.status(500).json({ message: 'Order could not be placed.' }) } })
 app.get('/api/orders', async (request, response) => { const session = getSession(request); if (!session) return response.status(401).json({ message: 'Please login first.' }); try { const orders = await readOrders(); const visible = isOwner(session) ? orders : orders.filter((order) => order.customerContact === session.contact); return response.json({ orders: visible }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Orders could not be loaded.' }) } })
