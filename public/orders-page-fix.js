@@ -30,19 +30,19 @@
   }
   const selectCancelReason = (orderId) => new Promise(resolve => {
     const reasons = [
-      'Order galti se place ho gaya',
-      'Product ki zaroorat nahi hai',
-      'Delivery mein bahut time lag raha hai',
-      'Product ka price zyada hai',
-      'Dusra product order karna hai',
-      'Payment se judi dikkat',
-      'Address ya contact details galat hain',
+      'Ordered by mistake',
+      'I no longer need the product',
+      'Delivery is taking too long',
+      'The product price is too high',
+      'I want to order a different product',
+      'Payment issue',
+      'Incorrect address or contact details',
       'Other'
     ]
     document.getElementById('ac-cancel-modal')?.remove()
     const modal = document.createElement('div')
     modal.id = 'ac-cancel-modal'; modal.className = 'ac-cancel-modal'
-    modal.innerHTML = '<div class="ac-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="ac-cancel-title"><h2 id="ac-cancel-title">Cancel Order #' + esc(orderId) + '</h2><p>Cancel karne ka reason select karein:</p><select aria-label="Cancellation reason"><option value="">Reason select karein</option>' + reasons.map(r => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('') + '</select><div class="ac-cancel-actions"><button type="button" class="ac-cancel-keep">Wapas</button><button type="button" class="ac-cancel-confirm" disabled>Cancel Order</button></div></div>'
+    modal.innerHTML = '<div class="ac-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="ac-cancel-title"><h2 id="ac-cancel-title">Cancel Order #' + esc(orderId) + '</h2><p>Please select a reason for cancellation:</p><select aria-label="Cancellation reason"><option value="">Select a reason</option>' + reasons.map(r => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('') + '</select><div class="ac-cancel-actions"><button type="button" class="ac-cancel-keep">Go Back</button><button type="button" class="ac-cancel-confirm" disabled>Cancel Order</button></div></div>'
     document.body.appendChild(modal)
     const select = modal.querySelector('select'), confirmButton = modal.querySelector('.ac-cancel-confirm')
     select.onchange = () => { confirmButton.disabled = !select.value }
