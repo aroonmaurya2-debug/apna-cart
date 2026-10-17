@@ -18,7 +18,7 @@
   const getOrders = async () => {
     const local = readLocal()
     const u = user()
-    if (!u?.contact) return local.map(o => ({ ...o, _localOnly: true }))
+    if (!u?.contact) { const hidden = new Set(readHidden()); return local.filter(o => !hidden.has(String(o.id))).map(o => ({ ...o, _localOnly: true })) }
     try {
       const token = localStorage.getItem('apna-cart-token') || localStorage.getItem('apna-cart-auth-token') || ''
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
