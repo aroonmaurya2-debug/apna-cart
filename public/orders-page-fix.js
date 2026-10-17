@@ -19,7 +19,7 @@
     try {
       const token = localStorage.getItem('apna-cart-token') || localStorage.getItem('apna-cart-auth-token') || ''
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const apiBase = location.hostname === 'localhost' ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
+      const apiBase = location.hostname === 'localhost' ? 'http://localhost:10000/api' : location.origin + '/api'
       const r = await fetch(apiBase + '/orders?contact=' + encodeURIComponent(u.contact), { headers })
       const d = await r.json().catch(() => ({}))
       // Only backend-saved orders can be cancelled. Do not merge local fallback IDs into server orders.
@@ -78,7 +78,7 @@
             else alert('Your login session is missing. Please log in again, then retry cancelling this order.')
             return
           }
-          const base = location.hostname === 'localhost' ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
+          const base = location.hostname === 'localhost' ? 'http://localhost:10000/api' : location.origin + '/api'
           const response = await fetch(base + '/orders/' + encodeURIComponent(order.id) + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ reason }) })
           const data = await response.json().catch(() => ({}))
           if (response.status === 401) {
