@@ -72,14 +72,28 @@
         button.disabled = true; button.textContent = 'Cancelling…'
         try {
           const token = localStorage.getItem('apna-cart-token') || localStorage.getItem('apna-cart-auth-token') || ''
+          if (!token) {
+            button.disabled = false; button.textContent = 'Cancel Order'
+            if (typeof window.openAccountLogin === 'function') window.openAccountLogin()
+            else alert('Your login session is missing. Please log in again, then retry cancelling this order.')
+            return
+          }
           const base = location.hostname === 'localhost' ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
-          const response = await fetch(base + '/orders/' + encodeURIComponent(order.id) + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify({ reason }) })
+          const response = await fetch(base + '/orders/' + encodeURIComponent(order.id) + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ reason }) })
           const data = await response.json().catch(() => ({}))
-          if (!response.ok) throw new Error(data.message || 'Order cancel nahi ho paya. Dobara koshish karein.')
+          if (response.status === 401) {
+            localStorage.removeItem('apna-cart-token')
+            localStorage.removeItem('apna-cart-auth-token')
+            button.disabled = false; button.textContent = 'Cancel Order'
+            if (typeof window.openAccountLogin === 'function') window.openAccountLogin()
+            else alert('Your login session has expired. Please log in again, then retry cancelling this order.')
+            return
+          }
+          if (!response.ok) throw new Error(data.message || 'Order could not be cancelled. Please try again.')
           order.status = data.order?.status || 'cancelled'
           try { const saved = JSON.parse(localStorage.getItem('apna-cart-local-orders') || '[]'); localStorage.setItem('apna-cart-local-orders', JSON.stringify(saved.map(o => String(o.id) === String(order.id) ? { ...o, status: order.status } : o))) } catch (_) {}
-          render(orders); alert('Aapka order successfully cancel ho gaya.')
-        } catch (error) { alert(error.message || 'Order cancel nahi ho paya. Please dobara try karein.'); button.disabled = false; button.textContent = 'Cancel Order' }
+          render(orders); alert('Your order has been cancelled successfully.')
+        } catch (error) { alert(error.message || 'Order could not be cancelled. Please try again.'); button.disabled = false; button.textContent = 'Cancel Order' }
       }
     })
   }
