@@ -29,11 +29,24 @@ const getFirebaseStore = () => {
       const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
         ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
         : { projectId: process.env.FIREBASE_PROJECT_ID, clientEmail: process.env.FIREBASE_CLIENT_EMAIL, privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') }
-      if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) return null
-      initializeApp({ credential: cert(serviceAccount) })
+      if (serviceAccount.projectId && serviceAccount.clientEmail && serviceAccount.privateKey) {
+        initializeApp({ credential: cert(serviceAccount) })
+        return getFirestore()
+      }
+      // Firebase Auth ID tokens can still be verified using the project ID.
+      // Do not enable Firestore without service-account credentials.
+      initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || 'apna-cart-c60f4' })
+      console.warn('Firebase Admin initialized for ID-token verification only; Firestore service-account credentials are missing.')
+      return null
     }
     return getFirestore()
-  } catch (error) { console.error('Firebase is not configured. Using local order storage:', error.message); return null }
+  } catch (error) {
+    console.error('Firebase is not configured. Using local order storage:', error.message)
+    try {
+      if (getApps().length === 0) initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || 'apna-cart-c60f4' })
+    } catch {}
+    return null
+  }
 }
 
 const firestore = getFirebaseStore()
