@@ -63,7 +63,9 @@ export default function AdminPanel() {
     try {
       const [pr, or, sr] = await Promise.all([api('/products'), api('/orders'), api('/admin/sellers')])
       const pd = await pr.json().catch(() => ({})); const od = await or.json().catch(() => ({})); const sd = await sr.json().catch(() => ({}))
-      if (!pr.ok) throw new Error(pd?.error || 'Products load failed')
+      if (!pr.ok) throw new Error(pd?.error || `Products load failed (${pr.status})`)
+      if (!or.ok) throw new Error(od?.error || od?.message || `Orders load failed (${or.status}). Admin login/session permission check karein.`)
+      if (!sr.ok) throw new Error(sd?.error || sd?.message || `Sellers load failed (${sr.status})`)
       setProducts(Array.isArray(pd?.products) ? pd.products : []); setOrders(Array.isArray(od?.orders) ? od.orders : []); setSellers(Array.isArray(sd?.sellers) ? sd.sellers : [])
     } catch (e) { setError(e instanceof Error ? e.message : 'Backend data load failed.') } finally { setRefreshing(false) }
   }
