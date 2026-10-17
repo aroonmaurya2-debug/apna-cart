@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
 import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth, storage } from './firebase'
 import './admin-panel.css'
@@ -97,8 +97,20 @@ export default function AdminPanel() {
       const uploaded = await Promise.all(files.map(async (file, index) => {
         const blob = await compressImage(file)
         const imageRef = ref(currentStorage, `products/${currentAuth.currentUser!.uid}/${Date.now()}-${index}.jpg`)
-        await uploadBytes(imageRef, blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000' })
-        return getDownloadURL(imageRef)
+        return new Promise<string>((resolve, reject) => {
+          const task = uploadBytesResumable(imageRef, blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000' })
+          const timeout = window.setTimeout(() => {
+            task.cancel()
+            reject(new Error('Upload 45 seconds se zyada ruk gaya. Firebase Storage bucket aur Storage Rules check karna hoga.'))
+          }, 45000)
+          task.on('state_changed', undefined, (err) => {
+            window.clearTimeout(timeout)
+            reject(err)
+          }, async () => {
+            window.clearTimeout(timeout)
+            try { resolve(await getDownloadURL(task.snapshot.ref)) } catch (err) { reject(err) }
+          })
+        })
       }))
       setForm((p: any) => ({ ...p, image: uploaded[0] || '', images: uploaded }))
     } catch (e) {
