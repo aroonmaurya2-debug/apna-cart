@@ -6,6 +6,7 @@
   const css = () => {
     if (document.getElementById('ac-orders-style')) return
     const s = document.createElement('style'); s.id = 'ac-orders-style'; s.textContent = `
+      .ac-cancel-modal{position:fixed;inset:0;z-index:25010;background:#0008;display:grid;place-items:center;padding:20px}.ac-cancel-dialog{background:#fff;color:#10251e;width:min(100%,420px);border-radius:18px;padding:20px;box-shadow:0 15px 50px #0003}.ac-cancel-dialog h2{margin:0 0 8px;font-size:20px}.ac-cancel-dialog p{color:#62766d;font-size:14px;margin:0 0 15px}.ac-cancel-dialog select{width:100%;padding:13px;border:1px solid #cadbd2;border-radius:10px;background:#fff;font-size:15px;color:#10251e}.ac-cancel-actions{display:flex;gap:10px;margin-top:18px}.ac-cancel-actions button{flex:1;padding:12px;border-radius:10px;font-weight:800;border:0}.ac-cancel-keep{background:#edf4f0;color:#244438}.ac-cancel-confirm{background:#b3261e;color:#fff}.ac-cancel-confirm:disabled{opacity:.5}
       #ac-orders-page{position:fixed;inset:0;z-index:25000;background:#f5fbf8;color:#10251e;font-family:Arial,sans-serif;overflow:auto}
       #ac-orders-page *{box-sizing:border-box}.ac-orders-top{background:linear-gradient(145deg,#075c3f,#078a58);color:#fff;padding:16px 18px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:2;box-shadow:0 4px 14px #064f3830}.ac-orders-back{border:0;background:transparent;color:#fff;font-size:35px;width:40px}.ac-orders-top h1{font-size:23px;margin:0;flex:1}.ac-orders-count{font-size:13px;background:#ffffff22;border:1px solid #ffffff55;padding:7px 10px;border-radius:18px}
       .ac-orders-body{max-width:760px;margin:auto;padding:16px 15px 35px}.ac-order-card{background:#fff;border:1px solid #dcebe4;border-radius:17px;padding:15px;margin-bottom:13px;box-shadow:0 2px 8px #164b3815}.ac-order-head{display:flex;gap:10px;align-items:center}.ac-order-icon{width:45px;height:45px;border-radius:50%;background:#e3f8ed;display:grid;place-items:center;font-size:23px}.ac-order-id{flex:1}.ac-order-id strong{display:block;font-size:16px}.ac-order-id small{color:#6b7f77}.ac-status{background:#e3f8ed;color:#08794d;border-radius:16px;padding:6px 9px;font-size:12px;font-weight:800}.ac-order-items{margin:13px 0;border-top:1px solid #edf2ef;border-bottom:1px solid #edf2ef;padding:10px 0}.ac-item{display:flex;gap:10px;padding:7px 0}.ac-item img{width:52px;height:52px;border-radius:9px;object-fit:cover;background:#eef6f2}.ac-item-main{flex:1}.ac-item-main strong{display:block;font-size:14px}.ac-item-main small{display:block;color:#6c7e77;margin-top:4px}.ac-total{display:flex;justify-content:space-between;font-weight:800;font-size:16px}.ac-cancel-order{margin-top:12px;border:1px solid #e7aaa5;background:#fff5f4;color:#b3261e;border-radius:10px;padding:10px 14px;font-weight:800;width:100%}.ac-cancel-order:disabled{opacity:.6}.ac-order-meta{margin-top:10px;color:#63776f;font-size:13px;line-height:1.55}.ac-empty{background:#fff;border:1px solid #dcebe4;border-radius:18px;text-align:center;padding:50px 20px}.ac-empty-icon{font-size:55px;margin-bottom:12px}.ac-empty h2{margin:0 0 8px}.ac-empty p{color:#6b7f77}.ac-shop{border:0;background:#078a58;color:#fff;border-radius:23px;padding:12px 22px;font-weight:800;margin-top:10px}
@@ -27,6 +28,30 @@
     } catch (_) {}
     return local
   }
+  const selectCancelReason = (orderId) => new Promise(resolve => {
+    const reasons = [
+      'Order galti se place ho gaya',
+      'Product ki zaroorat nahi hai',
+      'Delivery mein bahut time lag raha hai',
+      'Product ka price zyada hai',
+      'Dusra product order karna hai',
+      'Payment se judi dikkat',
+      'Address ya contact details galat hain',
+      'Other'
+    ]
+    document.getElementById('ac-cancel-modal')?.remove()
+    const modal = document.createElement('div')
+    modal.id = 'ac-cancel-modal'; modal.className = 'ac-cancel-modal'
+    modal.innerHTML = '<div class="ac-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="ac-cancel-title"><h2 id="ac-cancel-title">Cancel Order #' + esc(orderId) + '</h2><p>Cancel karne ka reason select karein:</p><select aria-label="Cancellation reason"><option value="">Reason select karein</option>' + reasons.map(r => '<option value="' + esc(r) + '">' + esc(r) + '</option>').join('') + '</select><div class="ac-cancel-actions"><button type="button" class="ac-cancel-keep">Wapas</button><button type="button" class="ac-cancel-confirm" disabled>Cancel Order</button></div></div>'
+    document.body.appendChild(modal)
+    const select = modal.querySelector('select'), confirmButton = modal.querySelector('.ac-cancel-confirm')
+    select.onchange = () => { confirmButton.disabled = !select.value }
+    const finish = value => { modal.remove(); resolve(value) }
+    modal.querySelector('.ac-cancel-keep').onclick = () => finish(null)
+    confirmButton.onclick = () => finish(select.value || null)
+    modal.onclick = e => { if (e.target === modal) finish(null) }
+    select.focus()
+  })
   const render = (orders) => {
     const page = document.getElementById('ac-orders-page'); if (!page) return
     page.querySelector('.ac-orders-count').textContent = `${orders.length} order${orders.length === 1 ? '' : 's'}`
@@ -42,12 +67,13 @@
         if (!order) return
         const status = String(order.status || 'placed').toLowerCase()
         if (!['placed', 'pending', 'confirmed'].includes(status)) { alert('Yeh order ab cancel nahi ho sakta.'); return }
-        if (!confirm('Kya aap sach mein Order #' + order.id + ' cancel karna chahte hain?')) return
+        const reason = await selectCancelReason(order.id)
+        if (!reason) return
         button.disabled = true; button.textContent = 'Cancelling…'
         try {
           const token = localStorage.getItem('apna-cart-token') || localStorage.getItem('apna-cart-auth-token') || ''
           const base = location.hostname === 'localhost' ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
-          const response = await fetch(base + '/orders/' + encodeURIComponent(order.id) + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify({ reason: 'Customer requested cancellation' }) })
+          const response = await fetch(base + '/orders/' + encodeURIComponent(order.id) + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify({ reason }) })
           const data = await response.json().catch(() => ({}))
           if (!response.ok) throw new Error(data.message || 'Order cancel nahi ho paya. Dobara koshish karein.')
           order.status = data.order?.status || 'cancelled'
