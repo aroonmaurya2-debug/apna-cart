@@ -52,11 +52,35 @@ app.use(express.json({ limit: '100kb' }))
 const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 const normaliseContact = (value) => value.trim().toLowerCase()
 const getSession = (request) => sessions.get(request.headers.authorization?.replace('Bearer ', ''))
+const sessionSecret = process.env.SESSION_SECRET
+const createSessionToken = (session) => {
+  if (!sessionSecret) throw new Error('SESSION_SECRET is not configured.')
+  const payload = Buffer.from(JSON.stringify({ ...session, expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 })).toString('base64url')
+  const signature = crypto.createHmac('sha256', sessionSecret).update(payload).digest('base64url')
+  return `${payload}.${signature}`
+}
 const resolveSession = async (request) => {
-  const session = getSession(request)
-  if (session) return session
   const token = request.headers.authorization?.replace('Bearer ', '').trim()
   if (!token) return null
+  const session = sessions.get(token)
+  if (session) return session
+  if (sessionSecret) {
+    try {
+      const [payload, signature] = token.split('.')
+      if (payload && signature) {
+        const expected = crypto.createHmac('sha256', sessionSecret).update(payload).digest()
+        const supplied = Buffer.from(signature, 'base64url')
+        if (supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected)) {
+          const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+          if (decoded.expiresAt > Date.now() && decoded.name && decoded.contact) {
+            const restored = { name: String(decoded.name), contact: String(decoded.contact), createdAt: Number(decoded.createdAt || Date.now()) }
+            sessions.set(token, restored)
+            return restored
+          }
+        }
+      }
+    } catch {}
+  }
   if (sessionsCollection) {
     try { const snapshot = await sessionsCollection.doc(token).get(); if (snapshot.exists) return snapshot.data() } catch (error) { console.error('Saved login session lookup failed:', error?.message || error) }
   }
@@ -104,7 +128,7 @@ app.post('/api/auth/request-otp', async (request, response) => {
 app.post('/api/auth/verify-otp', async (request, response) => {
   const { contact, otp } = request.body || {}; const cleanContact = normaliseContact(contact || ''); const record = otpStore.get(cleanContact)
   if (!record || Date.now() > record.expiresAt || record.attempts >= 5) return response.status(400).json({ message: 'OTP expired. Please request a new one.' }); record.attempts += 1
-  try { const valid = record.provider === 'twilio-verify' ? await verifySmsOtp(cleanContact, String(otp || '').trim()) : record.otp === String(otp || '').trim(); if (!valid) return response.status(400).json({ message: 'Incorrect OTP.' }); otpStore.delete(cleanContact); const token = crypto.randomBytes(32).toString('hex'); const session = { name: record.name, contact: cleanContact, createdAt: Date.now() }; sessions.set(token, session); if (sessionsCollection) await sessionsCollection.doc(token).set(session); return response.json({ token, user: { name: record.name, contact: cleanContact } }) }
+  try { const valid = record.provider === 'twilio-verify' ? await verifySmsOtp(cleanContact, String(otp || '').trim()) : record.otp === String(otp || '').trim(); if (!valid) return response.status(400).json({ message: 'Incorrect OTP.' }); otpStore.delete(cleanContact); const session = { name: record.name, contact: cleanContact, createdAt: Date.now() }; const token = createSessionToken(session); sessions.set(token, session); if (sessionsCollection) await sessionsCollection.doc(token).set(session); return response.json({ token, user: { name: record.name, contact: cleanContact } }) }
   catch (error) { console.error('OTP verification failed:', error); return response.status(502).json({ message: error?.message || 'OTP verification failed. Please try again.' }) }
 })
 
