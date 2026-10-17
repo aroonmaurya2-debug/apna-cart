@@ -13,21 +13,20 @@
     `; document.head.appendChild(s)
   }
   const getOrders = async () => {
-    let local = readLocal(); const u = user();
+    const local = readLocal()
+    const u = user()
+    if (!u?.contact) return local.map(o => ({ ...o, _localOnly: true }))
     try {
-      if (u?.contact) {
-        const token = localStorage.getItem('apna-cart-token') || localStorage.getItem('apna-cart-auth-token') || ''
-        const headers = token ? { Authorization: `Bearer ${token}` } : {}
-        const apiBase = location.hostname === 'localhost' ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
-        const r = await fetch(apiBase + '/orders?contact=' + encodeURIComponent(u.contact), { headers })
-        const d = await r.json().catch(() => ({}))
-        if (r.ok && Array.isArray(d.orders)) {
-          const seen = new Set(local.map(o => String(o?.id)))
-          local = [...d.orders, ...local.filter(o => !seen.has(String(o?.id)))]
-        }
-      }
+      const token = localStorage.getItem('apna-cart-token') || localStorage.getItem('apna-cart-auth-token') || ''
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const apiBase = location.hostname === 'localhost' ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
+      const r = await fetch(apiBase + '/orders?contact=' + encodeURIComponent(u.contact), { headers })
+      const d = await r.json().catch(() => ({}))
+      // Only backend-saved orders can be cancelled. Do not merge local fallback IDs into server orders.
+      if (r.ok && Array.isArray(d.orders)) return d.orders
     } catch (_) {}
-    return local
+    // Cached orders remain visible during API outages, but cannot be cancelled using a potentially fake ID.
+    return local.map(o => ({ ...o, _localOnly: true }))
   }
   const selectCancelReason = (orderId) => new Promise(resolve => {
     const reasons = [
@@ -60,7 +59,7 @@
     if (!orders.length) { body.innerHTML = `<div class="ac-empty"><div class="ac-empty-icon">📦</div><h2>No orders yet</h2><p>Your placed orders will appear here.</p><button class="ac-shop">Continue Shopping</button></div>`; body.querySelector('.ac-shop').onclick = () => page.remove(); return }
     body.innerHTML = orders.map(o => {
       const items = Array.isArray(o.items) ? o.items : []
-      return `<article class="ac-order-card"><div class="ac-order-head"><div class="ac-order-icon">📦</div><div class="ac-order-id"><strong>Order #${esc(o.id)}</strong><small>${o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN') : 'Recently placed'}</small></div><span class="ac-status">${esc(o.status || 'Placed')}</span></div><div class="ac-order-items">${items.length ? items.map(i => `<div class="ac-item">${i.image ? `<img src="${esc(i.image)}" alt="">` : '<div style="width:52px;height:52px;border-radius:9px;background:#eef6f2;display:grid;place-items:center">🛍️</div>'}<div class="ac-item-main"><strong>${esc(i.name || 'Product')}</strong><small>Qty: ${esc(i.quantity || 1)} · ${money(i.price)}</small></div></div>`).join('') : '<div class="ac-item-main">Order items</div>'}</div><div class="ac-total"><span>Total</span><span>${money(o.total)}</span></div><div class="ac-order-meta">📍 ${esc(o.address || o.location || 'Address not available')}<br>📱 ${esc(o.phone || '')}<br>💳 ${esc(o.paymentMethod || 'Cash on Delivery')}</div>${['placed','pending','confirmed'].includes(String(o.status || 'placed').toLowerCase()) ? '<button class="ac-cancel-order" type="button" data-cancel-order="' + esc(o.id) + '">Cancel Order</button>' : ''}</article>`
+      return `<article class="ac-order-card"><div class="ac-order-head"><div class="ac-order-icon">📦</div><div class="ac-order-id"><strong>Order #${esc(o.id)}</strong><small>${o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN') : 'Recently placed'}</small></div><span class="ac-status">${esc(o.status || 'Placed')}</span></div><div class="ac-order-items">${items.length ? items.map(i => `<div class="ac-item">${i.image ? `<img src="${esc(i.image)}" alt="">` : '<div style="width:52px;height:52px;border-radius:9px;background:#eef6f2;display:grid;place-items:center">🛍️</div>'}<div class="ac-item-main"><strong>${esc(i.name || 'Product')}</strong><small>Qty: ${esc(i.quantity || 1)} · ${money(i.price)}</small></div></div>`).join('') : '<div class="ac-item-main">Order items</div>'}</div><div class="ac-total"><span>Total</span><span>${money(o.total)}</span></div><div class="ac-order-meta">📍 ${esc(o.address || o.location || 'Address not available')}<br>📱 ${esc(o.phone || '')}<br>💳 ${esc(o.paymentMethod || 'Cash on Delivery')}</div>${!o._localOnly && ['placed','pending','confirmed'].includes(String(o.status || 'placed').toLowerCase()) ? '<button class="ac-cancel-order" type="button" data-cancel-order="' + esc(o.id) + '">Cancel Order</button>' : ''}</article>`
     }).join('')
     body.querySelectorAll('[data-cancel-order]').forEach(button => {
       button.onclick = async () => {
