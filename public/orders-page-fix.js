@@ -18,7 +18,8 @@
       if (u?.contact) {
         const token = localStorage.getItem('apna-cart-token') || localStorage.getItem('apna-cart-auth-token') || ''
         const headers = token ? { Authorization: `Bearer ${token}` } : {}
-        const r = await fetch(`/api/orders?contact=${encodeURIComponent(u.contact)}`, { headers })
+        const apiBase = location.hostname === 'localhost' ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
+        const r = await fetch(apiBase + '/orders?contact=' + encodeURIComponent(u.contact), { headers })
         const d = await r.json().catch(() => ({}))
         if (r.ok && Array.isArray(d.orders)) {
           const seen = new Set(local.map(o => String(o?.id)))
