@@ -1,5 +1,5 @@
 export const registerOrderControlRoutes = (app, options = {}) => {
-  const { ordersCollection, getSession, isOwner, readOrders, writeOrders } = options
+  const { ordersCollection, getSession, resolveSession = getSession, isOwner, readOrders, writeOrders } = options
   const save = async (id, updates) => {
     if (ordersCollection) {
       const ref = ordersCollection.doc(String(id))
@@ -17,7 +17,7 @@ export const registerOrderControlRoutes = (app, options = {}) => {
   }
 
   app.post('/api/orders/:id/cancel', async (request, response) => {
-    const session = getSession(request)
+    const session = await resolveSession(request)
     if (!session) return response.status(401).json({ message: 'Please login first.' })
     try {
       const orders = await readOrders()
@@ -39,7 +39,7 @@ export const registerOrderControlRoutes = (app, options = {}) => {
   })
 
   app.post('/api/orders/:id/return', async (request, response) => {
-    const session = getSession(request)
+    const session = await resolveSession(request)
     if (!session) return response.status(401).json({ message: 'Please login first.' })
     try {
       const orders = await readOrders()
@@ -64,7 +64,7 @@ export const registerOrderControlRoutes = (app, options = {}) => {
   })
 
   app.get('/api/admin/returns', async (request, response) => {
-    const session = getSession(request)
+    const session = await resolveSession(request)
     if (!isOwner(session)) return response.status(403).json({ message: 'Owner access required.' })
     try {
       const orders = await readOrders()
@@ -76,7 +76,7 @@ export const registerOrderControlRoutes = (app, options = {}) => {
   })
 
   app.put('/api/admin/orders/:id/return', async (request, response) => {
-    const session = getSession(request)
+    const session = await resolveSession(request)
     if (!isOwner(session)) return response.status(403).json({ message: 'Owner access required.' })
     const returnStatus = String(request.body?.returnStatus || '').trim()
     if (!['approved', 'rejected', 'picked_up', 'refunded'].includes(returnStatus)) return response.status(400).json({ message: 'Invalid return status.' })
