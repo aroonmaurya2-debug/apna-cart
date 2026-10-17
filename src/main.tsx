@@ -19,6 +19,7 @@ import './profile-header.css'
 import './filter-polish.css'
 import './product-detail-polish.css'
 import './cart-checkout-polish.css'
+import './premium-refresh.css'
 
 type State = { error: unknown }
 class StartupBoundary extends Component<{ children: ReactNode }, State> {
