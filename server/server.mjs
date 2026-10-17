@@ -114,9 +114,42 @@ const clean = (value) => String(value ?? '').trim()
 const makeReferralCode = (contact) => `APNA${crypto.createHash('sha256').update(contact).digest('hex').slice(0, 8).toUpperCase()}`
 const referralDocId = (contact) => clean(contact).replace(/[^a-zA-Z0-9_-]/g, '_')
 
+const readLocalOrders = async () => {
+  try {
+    const parsed = JSON.parse(await fs.readFile(ordersFile, 'utf8'))
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 const readOrders = async () => {
-  if (ordersCollection) { const snapshot = await ordersCollection.orderBy('createdAt', 'desc').get(); return snapshot.docs.map((document) => document.data()) }
-  try { return JSON.parse(await fs.readFile(ordersFile, 'utf8')) } catch { return [] }
+  const localOrders = await readLocalOrders()
+  if (ordersCollection) {
+    try {
+      // Read every document instead of relying on an ordered query that can omit
+      // older documents without createdAt. Merge local fallback orders by ID too.
+      const snapshot = await ordersCollection.get()
+      const byId = new Map()
+      for (const document of snapshot.docs) {
+        const order = document.data() || {}
+        byId.set(String(order.id || document.id), { ...order, id: String(order.id || document.id) })
+      }
+      for (const order of localOrders) {
+        if (order?.id != null && !byId.has(String(order.id))) {
+          byId.set(String(order.id), order)
+          try { await ordersCollection.doc(String(order.id)).set(order, { merge: true }) }
+          catch (migrationError) { console.error('Local order migration failed:', migrationError?.message || migrationError) }
+        }
+      }
+      const orders = [...byId.values()].sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0))
+      console.log('Orders loaded:', orders.length, '(Firestore + local fallback merge)')
+      return orders
+    } catch (error) {
+      console.error('Firestore orders read failed; using local fallback:', error?.message || error)
+    }
+  }
+  console.log('Orders loaded from local fallback:', localOrders.length)
+  return localOrders
 }
 const writeOrders = async (orders) => { await fs.mkdir(dataDirectory, { recursive: true }); await fs.writeFile(ordersFile, JSON.stringify(orders, null, 2)) }
 const sendEmail = async (to, subject, text) => sendResendEmail({ to, subject, text })
@@ -167,7 +200,7 @@ registerAdminControlRoutes(app, { productsCollection, sellersCollection, getSess
 registerSellerProductRoutes(app, { productsCollection, sellersCollection, getSession, isOwner })
 registerOrderControlRoutes(app, { ordersCollection, getSession, resolveSession, isOwner, readOrders, writeOrders })
 
-app.post('/api/orders', async (request, response) => { const session = await resolveSession(request); if (!session) return response.status(401).json({ message: 'Please login first.' }); const body = request.body || {}; const order = { id: `order_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`, customerName: session.name, customerContact: session.contact, items: Array.isArray(body.items) ? body.items : [], total: Number(body.total || 0), address: clean(body.address), city: clean(body.city), pincode: clean(body.pincode), phone: clean(body.phone), paymentMethod: clean(body.paymentMethod) || 'Cash on Delivery', paymentReference: clean(body.paymentReference), paymentStatus: clean(body.paymentMethod) === 'UPI' ? 'pending_verification' : 'not_applicable', status: 'placed', createdAt: new Date().toISOString() }; if (!order.items.length || !order.total || !order.address) return response.status(400).json({ message: 'Order items, total and address are required.' }); try { if (ordersCollection) await ordersCollection.doc(order.id).set(order); else { const orders = await readOrders(); orders.unshift(order); await writeOrders(orders) } if (ownerEmail) { try { await sendEmail(ownerEmail, `New Apna Cart Order ${order.id}`, `New order placed by ${order.customerName} (${order.customerContact}). Total: ₹${order.total}. Delivery: ${order.address}, ${order.city} - ${order.pincode}.`) } catch (emailError) { console.error('Order notification email failed:', emailError?.message || emailError) } } return response.status(201).json({ order }) } catch (error) { console.error('Order create failed:', error); return response.status(500).json({ message: 'Order could not be placed.' }) } })
+app.post('/api/orders', async (request, response) => { const session = await resolveSession(request); if (!session) return response.status(401).json({ message: 'Please login first.' }); const body = request.body || {}; const order = { id: `order_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`, customerName: session.name, customerContact: session.contact, items: Array.isArray(body.items) ? body.items : [], total: Number(body.total || 0), address: clean(body.address), city: clean(body.city), pincode: clean(body.pincode), phone: clean(body.phone), paymentMethod: clean(body.paymentMethod) || 'Cash on Delivery', paymentReference: clean(body.paymentReference), paymentStatus: clean(body.paymentMethod) === 'UPI' ? 'pending_verification' : 'not_applicable', status: 'placed', createdAt: new Date().toISOString() }; if (!order.items.length || !order.total || !order.address) return response.status(400).json({ message: 'Order items, total and address are required.' }); try { if (ordersCollection) { await ordersCollection.doc(order.id).set(order); console.log('Order saved to Firestore:', order.id) } else { const orders = await readOrders(); orders.unshift(order); await writeOrders(orders); console.log('Order saved to local fallback:', order.id) } if (ownerEmail) { try { await sendEmail(ownerEmail, `New Apna Cart Order ${order.id}`, `New order placed by ${order.customerName} (${order.customerContact}). Total: ₹${order.total}. Delivery: ${order.address}, ${order.city} - ${order.pincode}.`) } catch (emailError) { console.error('Order notification email failed:', emailError?.message || emailError) } } return response.status(201).json({ order }) } catch (error) { console.error('Order create failed:', error); return response.status(500).json({ message: 'Order could not be placed.' }) } })
 app.get('/api/orders', async (request, response) => { const session = await resolveSession(request); if (!session) return response.status(401).json({ message: 'Please login first.' }); try { const orders = await readOrders(); const visible = isOwner(session) ? orders : orders.filter((order) => order.customerContact === session.contact); return response.json({ orders: visible }) } catch (error) { console.error(error); return response.status(500).json({ message: 'Orders could not be loaded.' }) } })
 app.put('/api/orders/:id', async (request,response)=>{const session=await resolveSession(request);if(!isOwner(session))return response.status(403).json({message:'Owner access required.'});const status=clean(request.body?.status);if(!['placed','pending','confirmed','shipped','delivered','completed','cancelled'].includes(status))return response.status(400).json({message:'Invalid order status.'});try{if(ordersCollection){const ref=ordersCollection.doc(request.params.id);const snap=await ref.get();if(!snap.exists)return response.status(404).json({message:'Order not found.'});await ref.set({status,updatedAt:new Date().toISOString()},{merge:true});return response.json({order:{...snap.data(),id:ref.id,status}})}const orders=await readOrders();const index=orders.findIndex(o=>String(o.id)===String(request.params.id));if(index<0)return response.status(404).json({message:'Order not found.'});orders[index]={...orders[index],status,updatedAt:new Date().toISOString()};await writeOrders(orders);return response.json({order:orders[index]})}catch(error){console.error('Order status update failed:',error);return response.status(500).json({message:'Order status could not be updated.'})}})
 
