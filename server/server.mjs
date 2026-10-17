@@ -26,11 +26,17 @@ const REFERRAL_REWARD = 73
 const getFirebaseStore = () => {
   try {
     if (getApps().length === 0) {
-      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
-        : { projectId: process.env.FIREBASE_PROJECT_ID, clientEmail: process.env.FIREBASE_CLIENT_EMAIL, privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') }
-      if (serviceAccount.projectId && serviceAccount.clientEmail && serviceAccount.privateKey) {
-        initializeApp({ credential: cert(serviceAccount) })
+      const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+      const serviceAccount = rawServiceAccount
+        ? JSON.parse(rawServiceAccount)
+        : { projectId: process.env.FIREBASE_PROJECT_ID, clientEmail: process.env.FIREBASE_CLIENT_EMAIL, privateKey: process.env.FIREBASE_PRIVATE_KEY }
+      // Google/Firebase downloaded service-account JSON uses snake_case keys.
+      const projectId = serviceAccount.projectId || serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID
+      const clientEmail = serviceAccount.clientEmail || serviceAccount.client_email || process.env.FIREBASE_CLIENT_EMAIL
+      const privateKey = (serviceAccount.privateKey || serviceAccount.private_key || process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n')
+      if (projectId && clientEmail && privateKey) {
+        initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) })
+        console.log('Firebase Admin initialized with Firestore service-account credentials.')
         return getFirestore()
       }
       // Firebase Auth ID tokens can still be verified using the project ID.
