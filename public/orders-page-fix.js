@@ -1,6 +1,9 @@
 (() => {
   const readLocal = () => { try { const v = JSON.parse(localStorage.getItem('apna-cart-local-orders') || '[]'); return Array.isArray(v) ? v : [] } catch (_) { return [] } }
   const user = () => { try { return JSON.parse(localStorage.getItem('apna-cart-user') || 'null') } catch (_) { return null } }
+  const hiddenKey = () => `apna-cart-hidden-orders:${String(user()?.contact || 'guest')}`
+  const readHidden = () => { try { const v = JSON.parse(localStorage.getItem(hiddenKey()) || '[]'); return Array.isArray(v) ? v.map(String) : [] } catch (_) { return [] } }
+  const hideOrders = (ids) => { try { const hidden = new Set(readHidden()); ids.forEach(id => hidden.add(String(id))); localStorage.setItem(hiddenKey(), JSON.stringify([...hidden])) } catch (_) {} }
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]))
   const money = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`
   const css = () => {
@@ -9,7 +12,7 @@
       .ac-cancel-modal{position:fixed;inset:0;z-index:25010;background:#0008;display:grid;place-items:center;padding:20px}.ac-cancel-dialog{background:#fff;color:#10251e;width:min(100%,420px);border-radius:18px;padding:20px;box-shadow:0 15px 50px #0003}.ac-cancel-dialog h2{margin:0 0 8px;font-size:20px}.ac-cancel-dialog p{color:#62766d;font-size:14px;margin:0 0 15px}.ac-cancel-dialog select{width:100%;padding:13px;border:1px solid #cadbd2;border-radius:10px;background:#fff;font-size:15px;color:#10251e}.ac-cancel-actions{display:flex;gap:10px;margin-top:18px}.ac-cancel-actions button{flex:1;padding:12px;border-radius:10px;font-weight:800;border:0}.ac-cancel-keep{background:#edf4f0;color:#244438}.ac-cancel-confirm{background:#b3261e;color:#fff}.ac-cancel-confirm:disabled{opacity:.5}
       #ac-orders-page{position:fixed;inset:0;z-index:25000;background:#f5fbf8;color:#10251e;font-family:Arial,sans-serif;overflow:auto}
       #ac-orders-page *{box-sizing:border-box}.ac-orders-top{background:linear-gradient(145deg,#075c3f,#078a58);color:#fff;padding:16px 18px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:2;box-shadow:0 4px 14px #064f3830}.ac-orders-back{border:0;background:transparent;color:#fff;font-size:35px;width:40px}.ac-orders-top h1{font-size:23px;margin:0;flex:1}.ac-orders-count{font-size:13px;background:#ffffff22;border:1px solid #ffffff55;padding:7px 10px;border-radius:18px}
-      .ac-orders-body{max-width:760px;margin:auto;padding:16px 15px 35px}.ac-order-card{background:#fff;border:1px solid #dcebe4;border-radius:17px;padding:15px;margin-bottom:13px;box-shadow:0 2px 8px #164b3815}.ac-order-head{display:flex;gap:10px;align-items:center}.ac-order-icon{width:45px;height:45px;border-radius:50%;background:#e3f8ed;display:grid;place-items:center;font-size:23px}.ac-order-id{flex:1}.ac-order-id strong{display:block;font-size:16px}.ac-order-id small{color:#6b7f77}.ac-status{background:#e3f8ed;color:#08794d;border-radius:16px;padding:6px 9px;font-size:12px;font-weight:800}.ac-order-items{margin:13px 0;border-top:1px solid #edf2ef;border-bottom:1px solid #edf2ef;padding:10px 0}.ac-item{display:flex;gap:10px;padding:7px 0}.ac-item img{width:52px;height:52px;border-radius:9px;object-fit:cover;background:#eef6f2}.ac-item-main{flex:1}.ac-item-main strong{display:block;font-size:14px}.ac-item-main small{display:block;color:#6c7e77;margin-top:4px}.ac-total{display:flex;justify-content:space-between;font-weight:800;font-size:16px}.ac-cancel-order{margin-top:12px;border:1px solid #e7aaa5;background:#fff5f4;color:#b3261e;border-radius:10px;padding:10px 14px;font-weight:800;width:100%}.ac-cancel-order:disabled{opacity:.6}.ac-order-meta{margin-top:10px;color:#63776f;font-size:13px;line-height:1.55}.ac-empty{background:#fff;border:1px solid #dcebe4;border-radius:18px;text-align:center;padding:50px 20px}.ac-empty-icon{font-size:55px;margin-bottom:12px}.ac-empty h2{margin:0 0 8px}.ac-empty p{color:#6b7f77}.ac-shop{border:0;background:#078a58;color:#fff;border-radius:23px;padding:12px 22px;font-weight:800;margin-top:10px}
+      .ac-orders-body{max-width:760px;margin:auto;padding:16px 15px 35px}.ac-order-list-actions{display:flex;justify-content:flex-end;margin:0 0 12px}.ac-clear-orders,.ac-remove-order{border:1px solid #cbdcd3;background:#fff;color:#365b4b;border-radius:10px;padding:9px 12px;font-weight:700}.ac-remove-order{margin-top:9px;width:100%;font-size:13px}.ac-order-card{background:#fff;border:1px solid #dcebe4;border-radius:17px;padding:15px;margin-bottom:13px;box-shadow:0 2px 8px #164b3815}.ac-order-head{display:flex;gap:10px;align-items:center}.ac-order-icon{width:45px;height:45px;border-radius:50%;background:#e3f8ed;display:grid;place-items:center;font-size:23px}.ac-order-id{flex:1}.ac-order-id strong{display:block;font-size:16px}.ac-order-id small{color:#6b7f77}.ac-status{background:#e3f8ed;color:#08794d;border-radius:16px;padding:6px 9px;font-size:12px;font-weight:800}.ac-order-items{margin:13px 0;border-top:1px solid #edf2ef;border-bottom:1px solid #edf2ef;padding:10px 0}.ac-item{display:flex;gap:10px;padding:7px 0}.ac-item img{width:52px;height:52px;border-radius:9px;object-fit:cover;background:#eef6f2}.ac-item-main{flex:1}.ac-item-main strong{display:block;font-size:14px}.ac-item-main small{display:block;color:#6c7e77;margin-top:4px}.ac-total{display:flex;justify-content:space-between;font-weight:800;font-size:16px}.ac-cancel-order{margin-top:12px;border:1px solid #e7aaa5;background:#fff5f4;color:#b3261e;border-radius:10px;padding:10px 14px;font-weight:800;width:100%}.ac-cancel-order:disabled{opacity:.6}.ac-order-meta{margin-top:10px;color:#63776f;font-size:13px;line-height:1.55}.ac-empty{background:#fff;border:1px solid #dcebe4;border-radius:18px;text-align:center;padding:50px 20px}.ac-empty-icon{font-size:55px;margin-bottom:12px}.ac-empty h2{margin:0 0 8px}.ac-empty p{color:#6b7f77}.ac-shop{border:0;background:#078a58;color:#fff;border-radius:23px;padding:12px 22px;font-weight:800;margin-top:10px}
     `; document.head.appendChild(s)
   }
   const getOrders = async () => {
@@ -23,10 +26,11 @@
       const r = await fetch(apiBase + '/orders?contact=' + encodeURIComponent(u.contact), { headers })
       const d = await r.json().catch(() => ({}))
       // Only backend-saved orders can be cancelled. Do not merge local fallback IDs into server orders.
-      if (r.ok && Array.isArray(d.orders)) return d.orders
+      if (r.ok && Array.isArray(d.orders)) { const hidden = new Set(readHidden()); return d.orders.filter(o => !hidden.has(String(o.id))) }
     } catch (_) {}
     // Cached orders remain visible during API outages, but cannot be cancelled using a potentially fake ID.
-    return local.map(o => ({ ...o, _localOnly: true }))
+    const hidden = new Set(readHidden())
+    return local.filter(o => !hidden.has(String(o.id))).map(o => ({ ...o, _localOnly: true }))
   }
   const selectCancelReason = (orderId) => new Promise(resolve => {
     const reasons = [
@@ -57,10 +61,23 @@
     page.querySelector('.ac-orders-count').textContent = `${orders.length} order${orders.length === 1 ? '' : 's'}`
     const body = page.querySelector('.ac-orders-body')
     if (!orders.length) { body.innerHTML = `<div class="ac-empty"><div class="ac-empty-icon">📦</div><h2>No orders yet</h2><p>Your placed orders will appear here.</p><button class="ac-shop">Continue Shopping</button></div>`; body.querySelector('.ac-shop').onclick = () => page.remove(); return }
-    body.innerHTML = orders.map(o => {
+    body.innerHTML = `<div class="ac-order-list-actions"><button class="ac-clear-orders" type="button">Clear old orders</button></div>` + orders.map(o => {
       const items = Array.isArray(o.items) ? o.items : []
-      return `<article class="ac-order-card"><div class="ac-order-head"><div class="ac-order-icon">📦</div><div class="ac-order-id"><strong>Order #${esc(o.id)}</strong><small>${o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN') : 'Recently placed'}</small></div><span class="ac-status">${esc(o.status || 'Placed')}</span></div><div class="ac-order-items">${items.length ? items.map(i => `<div class="ac-item">${i.image ? `<img src="${esc(i.image)}" alt="">` : '<div style="width:52px;height:52px;border-radius:9px;background:#eef6f2;display:grid;place-items:center">🛍️</div>'}<div class="ac-item-main"><strong>${esc(i.name || 'Product')}</strong><small>Qty: ${esc(i.quantity || 1)} · ${money(i.price)}</small></div></div>`).join('') : '<div class="ac-item-main">Order items</div>'}</div><div class="ac-total"><span>Total</span><span>${money(o.total)}</span></div><div class="ac-order-meta">📍 ${esc(o.address || o.location || 'Address not available')}<br>📱 ${esc(o.phone || '')}<br>💳 ${esc(o.paymentMethod || 'Cash on Delivery')}</div>${!o._localOnly && ['placed','pending','confirmed'].includes(String(o.status || 'placed').toLowerCase()) ? '<button class="ac-cancel-order" type="button" data-cancel-order="' + esc(o.id) + '">Cancel Order</button>' : ''}</article>`
+      return `<article class="ac-order-card"><div class="ac-order-head"><div class="ac-order-icon">📦</div><div class="ac-order-id"><strong>Order #${esc(o.id)}</strong><small>${o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN') : 'Recently placed'}</small></div><span class="ac-status">${esc(o.status || 'Placed')}</span></div><div class="ac-order-items">${items.length ? items.map(i => `<div class="ac-item">${i.image ? `<img src="${esc(i.image)}" alt="">` : '<div style="width:52px;height:52px;border-radius:9px;background:#eef6f2;display:grid;place-items:center">🛍️</div>'}<div class="ac-item-main"><strong>${esc(i.name || 'Product')}</strong><small>Qty: ${esc(i.quantity || 1)} · ${money(i.price)}</small></div></div>`).join('') : '<div class="ac-item-main">Order items</div>'}</div><div class="ac-total"><span>Total</span><span>${money(o.total)}</span></div><div class="ac-order-meta">📍 ${esc(o.address || o.location || 'Address not available')}<br>📱 ${esc(o.phone || '')}<br>💳 ${esc(o.paymentMethod || 'Cash on Delivery')}</div>${!o._localOnly && ['placed','pending','confirmed'].includes(String(o.status || 'placed').toLowerCase()) ? '<button class="ac-cancel-order" type="button" data-cancel-order="' + esc(o.id) + '">Cancel Order</button>' : ''}<button class="ac-remove-order" type="button" data-remove-order="' + esc(o.id) + '">Remove from my list</button></article>`
     }).join('')
+    body.querySelector('.ac-clear-orders').onclick = () => {
+      if (!confirm('Remove all currently shown orders from your My Orders list? This will not delete order records from the Admin Panel. New orders will still appear.')) return
+      hideOrders(orders.map(o => o.id))
+      render([])
+    }
+    body.querySelectorAll('[data-remove-order]').forEach(button => {
+      button.onclick = () => {
+        const id = button.dataset.removeOrder
+        if (!confirm('Remove this order from your My Orders list? The order record will remain in the Admin Panel.')) return
+        hideOrders([id])
+        render(orders.filter(o => String(o.id) !== String(id)))
+      }
+    })
     body.querySelectorAll('[data-cancel-order]').forEach(button => {
       button.onclick = async () => {
         const order = orders.find(o => String(o.id) === String(button.dataset.cancelOrder))
