@@ -1,0 +1,13 @@
+.hero-banner{position:relative;isolation:isolate;overflow:hidden;animation:apnaHeroFloat 5s ease-in-out infinite;box-shadow:0 14px 32px rgba(8,95,105,.18);}
+.hero-banner::before{content:"";position:absolute;inset:-35% auto -35% -45%;width:34%;z-index:0;pointer-events:none;background:linear-gradient(105deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);animation:apnaHeroShine 5.5s ease-in-out infinite;}
+.hero-banner>div,.hero-banner>button{position:relative;z-index:1;}
+.hero-banner h1{animation:apnaHeroTextIn .65s cubic-bezier(.2,.75,.25,1) both;text-shadow:0 3px 16px rgba(0,0,0,.15);}
+.hero-banner p{letter-spacing:.12em;text-shadow:0 2px 8px rgba(0,0,0,.12);}
+.hero-banner>button{transition:transform .22s ease,box-shadow .22s ease;box-shadow:0 6px 0 rgba(0,0,0,.09),0 10px 22px rgba(0,0,0,.15);animation:apnaShopPulse 2.8s ease-in-out infinite;}
+.hero-banner>button:active{transform:scale(.96);}
+.banner-dots span.active{box-shadow:0 0 12px rgba(255,255,255,.75);}
+@keyframes apnaHeroShine{0%,15%{left:-45%;opacity:0}30%{opacity:1}65%,100%{left:125%;opacity:0}}
+@keyframes apnaHeroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes apnaHeroTextIn{from{opacity:.65;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@keyframes apnaShopPulse{0%,100%{box-shadow:0 6px 0 rgba(0,0,0,.09),0 10px 22px rgba(0,0,0,.15)}50%{box-shadow:0 6px 0 rgba(0,0,0,.06),0 12px 28px rgba(255,255,255,.2)}}
+@media(prefers-reduced-motion:reduce){.hero-banner,.hero-banner::before,.hero-banner h1,.hero-banner>button{animation:none!important;transition:none!important}}
