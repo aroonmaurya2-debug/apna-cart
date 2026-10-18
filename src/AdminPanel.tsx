@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
+
 import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { auth, storage } from './firebase'
+import { auth } from './firebase'
 import './admin-panel.css'
 
 type Variant = { id?: string; color?: string; size?: string; price?: number | string; stock?: number | string; sku?: string }
@@ -86,36 +86,39 @@ export default function AdminPanel() {
   const startEdit = (p: Product) => { const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []); setEditing(p); setForm({ ...emptyProduct, ...p, price: String(p.price ?? ''), oldPrice: String(p.oldPrice ?? p.price ?? ''), stock: String(p.stock ?? 0), weight: String(p.weight ?? ''), returnDays: String(p.returnDays ?? 7), packOf: String(p.packOf ?? 1), images, variants: Array.isArray(p.variants) ? p.variants : [] }); setTab('products'); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).slice(0, 5); if (!files.length) return
-    const currentAuth = auth
-    const currentStorage = storage
-    if (!currentAuth?.currentUser || !currentStorage) { setError('Firebase Storage configured nahi hai. Firebase Console me Storage enable karein.'); return }
-    if (files.some(f => !f.type.startsWith('image/'))) { setError('Sirf image files select karein.'); return }
-    if (files.some(f => f.size > 8 * 1024 * 1024)) { setError('Har image 8MB se chhoti honi chahiye.'); return }
+    const files = Array.from(e.target.files || []).slice(0, 5)
+    if (!files.length) return
+    const cloudName = String(import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '').trim()
+    const uploadPreset = String(import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '').trim()
+    if (!cloudName || !uploadPreset) {
+      setError('Mobile image upload setup pending hai. Render Admin service me VITE_CLOUDINARY_CLOUD_NAME aur VITE_CLOUDINARY_UPLOAD_PRESET set karna hoga.')
+      e.target.value = ''
+      return
+    }
+    if (files.some(f => !f.type.startsWith('image/'))) { setError('Sirf image files select karein.'); e.target.value = ''; return }
+    if (files.some(f => f.size > 8 * 1024 * 1024)) { setError('Har image 8MB se chhoti honi chahiye.'); e.target.value = ''; return }
     setUploadingImages(true); setError('')
     try {
-      const uploaded = await Promise.all(files.map(async (file, index) => {
+      const uploaded = await Promise.all(files.map(async (file) => {
         const blob = await compressImage(file)
-        const imageRef = ref(currentStorage, `products/${currentAuth.currentUser!.uid}/${Date.now()}-${index}.jpg`)
-        return new Promise<string>((resolve, reject) => {
-          const task = uploadBytesResumable(imageRef, blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000' })
-          const timeout = window.setTimeout(() => {
-            task.cancel()
-            reject(new Error('Upload 45 seconds se zyada ruk gaya. Firebase Storage bucket aur Storage Rules check karna hoga.'))
-          }, 45000)
-          task.on('state_changed', undefined, (err) => {
-            window.clearTimeout(timeout)
-            reject(err)
-          }, async () => {
-            window.clearTimeout(timeout)
-            try { resolve(await getDownloadURL(task.snapshot.ref)) } catch (err) { reject(err) }
-          })
-        })
+        const body = new FormData()
+        body.append('file', blob, 'product.jpg')
+        body.append('upload_preset', uploadPreset)
+        const controller = new AbortController()
+        const timeout = window.setTimeout(() => controller.abort(), 45000)
+        try {
+          const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/image/upload`, { method: 'POST', body, signal: controller.signal })
+          const result = await response.json().catch(() => ({}))
+          if (!response.ok || !result.secure_url) throw new Error(result?.error?.message || `Image host upload failed (${response.status})`)
+          return String(result.secure_url)
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') throw new Error('Upload timeout. Internet connection check karke dobara try karein.')
+          throw err
+        } finally { window.clearTimeout(timeout) }
       }))
       setForm((p: any) => ({ ...p, image: uploaded[0] || '', images: uploaded }))
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Image upload failed.'
-      setError(message.includes('storage/unauthorized') ? 'Firebase Storage permission denied. Storage Rules me authorised user ko write access dein.' : `Image upload failed: ${message}`)
+      setError(e instanceof Error ? `Image upload failed: ${e.message}` : 'Image upload failed. Cloudinary settings check karein.')
     } finally { setUploadingImages(false); e.target.value = '' }
   }
   const addVariant = () => setForm((p: any) => ({ ...p, variants: [...(p.variants || []), { id: `variant_${Date.now()}`, color: '', size: '', price: p.price || '', stock: '0', sku: '' }] }))
