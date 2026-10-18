@@ -80,3 +80,22 @@ button:disabled { opacity: .65; cursor: not-allowed; }
 .bottom-nav i { position:absolute; top:5px; margin-left:16px; min-width:17px; height:17px; border-radius:50%; background:#ef5b5b; color:#fff; font-style:normal; font-size:9px; display:grid; place-items:center; }
 @media (max-width:800px) { .top-header { padding:10px 16px; } .main-content { padding:0 16px 25px; } .brand { font-size:25px; } .product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .category-strip { gap:13px; } .category-item { min-width:64px; } .category-icon { width:54px; height:54px; } .category-strip::before { min-height:170px; padding:24px 38% 24px 22px; font-size:20px; border-radius:18px; } }
 @media (max-width:430px) { .top-header { height:68px; } .brand { font-size:23px; } .brand-bag { font-size:27px; } .icon-button { width:39px; height:39px; } .search-box { height:52px; margin-top:5px; } .product-info { padding:9px; } .product-info h3 { font-size:13px; min-height:35px; } .product-description { font-size:10px; min-height:28px; } .price-row strong { font-size:16px; } .discount { font-size:9px; } .add-button { font-size:12px; padding:10px 5px; } .category-strip::before { min-height:150px; padding:20px 32% 20px 18px; font-size:18px; } }
+
+
+/* Animated customer home hero banner */
+.category-strip::before {
+  animation: apnaCartBannerGlow 3.2s ease-in-out infinite, apnaCartBannerPan 16s ease-in-out infinite alternate;
+  background-size: auto, 112% auto;
+  background-position: center, 42% center;
+}
+@keyframes apnaCartBannerGlow {
+  0%, 100% { box-shadow: 0 12px 28px rgba(12,92,108,.15); filter: saturate(1); }
+  50% { box-shadow: 0 16px 34px rgba(12,132,118,.30); filter: saturate(1.12); }
+}
+@keyframes apnaCartBannerPan {
+  0% { background-position: center, 42% center; }
+  100% { background-position: center, 58% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .category-strip::before { animation: none; }
+}
