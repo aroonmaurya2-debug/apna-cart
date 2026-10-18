@@ -37,7 +37,7 @@ class StartupBoundary extends Component<{ children: ReactNode }, State> {
 }
 const root = document.getElementById('root')
 if (!root) throw new Error('Apna Cart root element missing')
-const path = window.location.pathname.replace(/\\/+$/, '')
+const path = window.location.pathname.replace(/\/+$/, '')
 const isSellerPage = path === '/seller'
 const isAdminPage = path === '/admin'
 createRoot(root).render(<StrictMode><StartupBoundary>{isAdminPage ? <AdminPanel /> : isSellerPage ? <SellerDashboard /> : <><App /><CustomerFeatures /><MarketplaceFeatures /></>}</StartupBoundary></StrictMode>)
