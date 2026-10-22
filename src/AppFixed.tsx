@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 type Product = { id: number | string; name: string; category: string; gender?: string; price: number; oldPrice: number; image: string; images?: string[]; rating: number; reviews: number; discount: string; description: string }
 type CartLine = { productId: number | string; quantity: number }
 type User = { name: string; contact: string }
-type Order = { id: string | number; items: Array<Product & { quantity: number }>; total: number; status: string; location: string; phone: string; email: string; address?: string }
+type Order = { id: string | number; items: Array<Product & { quantity: number }>; total: number; status: string; location: string; phone: string; email: string; address?: string; city?: string; pincode?: string; paymentMethod?: string; paymentStatus?: string; cancelReason?: string; returnStatus?: string; returnReason?: string; createdAt?: string }
 type PaymentMethod = 'Cash on Delivery' | 'UPI' | 'Net banking'
 
 const API_BASE = import.meta.env.DEV ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
