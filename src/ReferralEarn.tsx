@@ -2,13 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import './ReferralEarn.css'
 
 const API = import.meta.env.DEV ? 'http://localhost:10000/api' : 'https://apna-cart-2rcq.onrender.com/api'
-const APP_LINK = 'https://aroonmaurya2-debug.github.io/apna-cart/'
+const APP_LINK = `${window.location.origin}/`
+type InstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> }
 
 export default function ReferralEarn() {
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
   const [invites, setInvites] = useState(0)
   const [message, setMessage] = useState('')
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
   const token = () => localStorage.getItem('apna-cart-token')
   const inviteLink = useMemo(() => code ? `${APP_LINK}?ref=${encodeURIComponent(code)}` : APP_LINK, [code])
 
@@ -33,6 +35,22 @@ export default function ReferralEarn() {
     return () => referButton.removeEventListener('click', openReferral)
   }, [])
   useEffect(() => { if (open) void loadReferral() }, [open])
+  useEffect(() => {
+    const onInstallPrompt = (event: Event) => { event.preventDefault(); setInstallPrompt(event as InstallPromptEvent) }
+    window.addEventListener('beforeinstallprompt', onInstallPrompt)
+    return () => window.removeEventListener('beforeinstallprompt', onInstallPrompt)
+  }, [])
+
+  async function installApp() {
+    if (!installPrompt) {
+      setMessage('Install ke liye Chrome me upar ⋮ menu kholen aur “Install app” ya “Add to Home screen” chunein. Agar option nahi dikhe, page refresh karke Chrome me link kholen.')
+      return
+    }
+    await installPrompt.prompt()
+    const choice = await installPrompt.userChoice
+    if (choice.outcome === 'accepted') setMessage('Apna Cart install ho raha hai.')
+    setInstallPrompt(null)
+  }
 
   function inviteWhatsApp() {
     const text = code
@@ -71,7 +89,7 @@ export default function ReferralEarn() {
         <div className="referral-rewards">{[1, 2, 3, 4].map(n => <div className="reward" key={n}><strong>₹73</strong><span>🔒</span><small>{n}{n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'} Invite</small></div>)}</div>
         <div className="referral-friends"><div className="friends-icon">👥</div><h2>Who can you invite?</h2><p>Friends ko Apna Cart par invite karein aur eligible invite activity complete hone par rewards unlock karein.</p><div className="referral-code">Your referral code: <b>{code || 'LOGIN REQUIRED'}</b></div><div className="referral-count">Successful invites: <b>{invites}</b></div></div>
         {message && <div className="referral-message">{message}</div>}
-        <div className="referral-bottom"><button type="button" className="whatsapp-btn" onClick={inviteWhatsApp}>🟢 Invite Via WhatsApp</button><button type="button" className="share-btn" onClick={shareReferral} aria-label="Share referral link">⌯</button></div>
+        <div className="referral-bottom"><button type="button" className="share-btn" onClick={installApp}>📲 Install App</button><button type="button" className="whatsapp-btn" onClick={inviteWhatsApp}>🟢 Invite Via WhatsApp</button><button type="button" className="share-btn" onClick={shareReferral} aria-label="Share referral link">⌯</button></div>
       </section>
     </div>}
   </>
