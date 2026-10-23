@@ -8,18 +8,34 @@
     return (raw || 'APNACART').slice(-10);
   };
 
-  function share() {
-    const code = referralCode();
-    const url = new URL('/', location.origin);
-    url.searchParams.set('ref', code);
-    const inviteUrl = url.toString();
-    const text = `🛍️ Join me on Apna Cart! Use my referral code ${code} and open the app here: ${inviteUrl}`;
-    if (navigator.share) {
-      navigator.share({ title: 'Apna Cart - Refer & Earn', text, url: inviteUrl }).catch(() => {});
-    } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(() => alert('Referral link copied! Ab ise WhatsApp par share karein.')).catch(() => alert(text));
-    } else {
-      alert(text);
+  async function getValidReferralCode() {
+    const token = localStorage.getItem('apna-cart-token');
+    if (!token) throw new Error('Apna Cart mein login karein, phir referral link share karein.');
+    const response = await fetch('https://apna-cart-2rcq.onrender.com/api/referrals/me', {
+      headers: { authorization: `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (!response.ok || !data.referral?.code) throw new Error(data.message || 'Referral code load nahi hua. Dobara login karke try karein.');
+    return data.referral.code;
+  }
+
+  async function share() {
+    try {
+      const code = await getValidReferralCode();
+      const url = new URL('/', location.origin);
+      url.searchParams.set('ref', code);
+      const inviteUrl = url.toString();
+      const text = `🛍️ Join me on Apna Cart! Use my referral code ${code} and open the app here: ${inviteUrl}`;
+      if (navigator.share) {
+        await navigator.share({ title: 'Apna Cart - Refer & Earn', text, url: inviteUrl });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        alert('Referral link copied! Ab ise WhatsApp par share karein.');
+      } else {
+        alert(text);
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Referral link share nahi hua.');
     }
   }
 
@@ -38,6 +54,16 @@
       @media(max-width:520px){.steps{grid-template-columns:1fr}.step{display:flex;align-items:center;text-align:left;gap:12px}.step b{width:35px;margin:0}}
     </style><div class="head"><div class="nav"><button class="btn back" type="button">‹</button><div class="title">Refer &amp; Earn</div><button class="btn shareTop" type="button">Share</button></div><div class="hero"><div class="gift">🎁</div><h1>Refer &amp; Earn</h1><p>Apne friends ko Apna Cart par invite karein aur rewards earn karein.</p></div></div><div class="body"><div class="card code"><div class="label">Your Referral Code</div><strong>${esc(c)}</strong><button class="copy" type="button">Copy Referral Code</button><button class="primary shareMain" type="button">🎁 Share Referral</button></div><div class="card"><h2>How it works</h2><div class="steps"><div class="step"><b>📤</b>Share your code</div><div class="step"><b>👥</b>Friend joins</div><div class="step"><b>🎉</b>Earn eligible rewards</div></div></div><div class="card"><h2>Why refer friends?</h2><div class="benefit"><div class="bi">💰</div><div><strong>Earn rewards</strong><span>Successful eligible referrals par rewards paayein.</span></div></div><div class="benefit"><div class="bi">🛍️</div><div><strong>Share great deals</strong><span>Friends ko Apna Cart ke products aur offers share karein.</span></div></div><div class="benefit"><div class="bi">📱</div><div><strong>Easy sharing</strong><span>WhatsApp ya kisi bhi supported app par share karein.</span></div></div><button class="primary shareBottom" type="button">🎁 Invite Friends</button></div><div class="note">Referral rewards ke rules aur amount current campaign ke hisaab se change ho sakte hain.</div></div>`;
     document.body.appendChild(page);
+    getValidReferralCode().then(validCode => {
+      const codeNode = page.querySelector('.code strong');
+      if (codeNode) codeNode.textContent = validCode;
+      page.querySelector('.copy').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(validCode);
+          alert('Referral code copied!');
+        } catch { alert(validCode); }
+      };
+    }).catch(() => {});
     page.querySelector('.back').onclick = () => page.remove();
     page.querySelector('.shareTop').onclick = share;
     page.querySelector('.shareMain').onclick = share;
