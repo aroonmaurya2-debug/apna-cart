@@ -68,8 +68,16 @@
     page.querySelector('.shareTop').onclick = share;
     page.querySelector('.shareMain').onclick = share;
     page.querySelector('.shareBottom').onclick = share;
-    page.querySelector('.copy').onclick = () => {
-      if (navigator.clipboard) navigator.clipboard.writeText(c).then(() => alert('Referral code copied!')).catch(() => alert(c)); else alert(c);
+    page.querySelector('.copy').onclick = async () => {
+      try {
+        const validCode = await getValidReferralCode();
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(validCode);
+          alert('Referral code copied!');
+        } else alert(validCode);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Referral code copy nahi hua.');
+      }
     };
   }
 
