@@ -29,24 +29,19 @@ jobs:
           mkdir apna-cart-android
           cd apna-cart-android
           npm init -y
-          npm pkg set type=module
           npm install @capacitor/core @capacitor/cli @capacitor/android
           mkdir www
           printf '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body></body></html>' > www/index.html
-          cat > capacitor.config.ts <<'EOF'
-          import type { CapacitorConfig } from '@capacitor/cli';
-
-          const config: CapacitorConfig = {
-            appId: 'com.apnacart.app',
-            appName: 'Apna Cart',
-            webDir: 'www',
-            server: {
-              url: 'https://apna-cart-frontend.onrender.com',
-              cleartext: false
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.apnacart.app",
+            "appName": "Apna Cart",
+            "webDir": "www",
+            "server": {
+              "url": "https://apna-cart-frontend.onrender.com",
+              "cleartext": false
             }
-          };
-
-          export default config;
+          }
           EOF
           npx cap add android
           npx cap sync android
