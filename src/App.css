@@ -110,3 +110,11 @@
   .bottom-nav button span { font-size: 22px; }
   .bottom-nav button label { font-size: 10px; }
 }
+
+
+/* Checkout screen: prevent legacy toast and floating menu overlap */
+.sms-notice { display: none !important; }
+@media (max-width: 760px) {
+  .bottom-nav { z-index: 10000; }
+  .checkout-page, .checkout-form { scroll-margin-bottom: 100px; }
+}
