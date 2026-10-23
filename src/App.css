@@ -78,3 +78,35 @@
 @media (max-width: 760px) { .delivery-timeline { left: 18px; bottom: 72px; width: calc(100% - 36px); padding: 15px; }.delivery-summary strong { font-size: 17px; }.timeline-step small { font-size: 7px; } }
 @media (max-width: 760px) { .notification-fab { top: 128px; right: 18px; }.notification-panel { top: 176px; right: 18px; width: calc(100% - 36px); } }
 .demo-otp { margin: 10px 0; padding: 9px 11px; background: #e8f0d9; color: #183d30; font: 11px 'DM Mono'; }.demo-otp strong { color: #df6c4d; letter-spacing: .12em; }
+
+
+/* Mobile bottom navigation and checkout spacing polish */
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
+  display: flex; align-items: stretch; justify-content: space-around; gap: 2px;
+  width: 100%; box-sizing: border-box;
+  padding: 7px 8px calc(7px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255,255,255,.98); border: 1px solid #dcebe2;
+  border-radius: 22px 22px 0 0; box-shadow: 0 -5px 22px rgba(24,61,48,.08);
+}
+.bottom-nav button {
+  position: relative; display: flex; flex: 1 1 0; min-width: 0; min-height: 58px;
+  flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 5px 2px; border: 0; border-radius: 12px; background: transparent;
+  color: #168052; font: inherit;
+}
+.bottom-nav button span { font-size: 23px; line-height: 1.15; }
+.bottom-nav button label { font-size: 11px; line-height: 1.2; font-weight: 700; }
+.bottom-nav button.active { background: #edf8f1; color: #087b4d; }
+.bottom-nav button i {
+  position: absolute; top: 1px; right: calc(50% - 23px); min-width: 16px; height: 16px;
+  padding: 0 3px; border-radius: 99px; background: #087b4d; color: white;
+  font-size: 10px; line-height: 16px; font-style: normal;
+}
+@media (max-width: 760px) {
+  body { padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px)); }
+  .bottom-nav { padding-left: 5px; padding-right: 5px; }
+  .bottom-nav button { min-height: 55px; }
+  .bottom-nav button span { font-size: 22px; }
+  .bottom-nav button label { font-size: 10px; }
+}
