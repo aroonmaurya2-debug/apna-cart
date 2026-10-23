@@ -9,10 +9,18 @@
   };
 
   function share() {
-    const text = `Join me on Apna Cart! Use my referral code ${referralCode()}.`;
-    if (navigator.share) navigator.share({ title: 'Apna Cart - Refer & Earn', text, url: location.origin }).catch(() => {});
-    else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => alert('Invite message copied.')).catch(() => alert(text));
-    else alert(text);
+    const code = referralCode();
+    const url = new URL('/', location.origin);
+    url.searchParams.set('ref', code);
+    const inviteUrl = url.toString();
+    const text = `🛍️ Join me on Apna Cart! Use my referral code ${code} and open the app here: ${inviteUrl}`;
+    if (navigator.share) {
+      navigator.share({ title: 'Apna Cart - Refer & Earn', text, url: inviteUrl }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => alert('Referral link copied! Ab ise WhatsApp par share karein.')).catch(() => alert(text));
+    } else {
+      alert(text);
+    }
   }
 
   function open() {
